@@ -217,6 +217,7 @@ function renderHome() {
             </div>
           </div>`).join("")}
     </div>
+    ${renderOilAlerts(state.vehicles, state.maints, state.drives)}
     ${recent.length > 0 ? `
     <div style="padding:8px 16px 16px">
       <div style="font-size:15px;font-weight:500;margin-bottom:10px">최근 주행</div>
@@ -246,17 +247,22 @@ function renderDriveList() {
                 <div class="row">
                   <span class="badge" style="background:${C.drive}22;color:${C.drive}">${veh(d.vehicleId)?.name || "-"}</span>
                   <span style="font-size:12px;color:#888">${d.date}</span>
+                  ${!d.arriveTime ? `<span style="background:#E74C3C22;color:#E74C3C;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:500">🔴 운행 중</span>` : `<span style="background:#27AE6022;color:#27AE60;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:500">🟢 복귀</span>`}
                 </div>
                 <div class="card-title">${d.from} → ${d.to}</div>
                 <div class="card-sub">
                   ${d.driver ? d.driver : ""}
-                  ${d.departTime && d.arriveTime ? ` · ${d.departTime.replace("T"," ")}~${d.arriveTime.replace("T"," ")}` : ""}
+                  ${d.departTime ? ` · 출발 ${d.departTime.replace("T"," ")}` : ""}
+                  ${d.arriveTime ? ` · 도착 ${d.arriveTime.replace("T"," ")}` : ""}
                   ${d.odometer ? ` · 총 ${numFmt(d.odometer)}km` : ""}
                 </div>
                 ${d.purpose ? `<div style="font-size:12px;color:#aaa;margin-top:2px">${d.purpose}</div>` : ""}
               </div>
             </div>
-            <div class="card-footer"><button class="del-btn" data-del="drives" data-id="${d.id}">삭제</button></div>
+            <div class="card-footer">
+              ${!d.arriveTime ? `<button data-arrive="${d.id}" style="font-size:12px;color:#fff;background:#4A90E2;border:none;border-radius:8px;padding:4px 12px;cursor:pointer;margin-right:8px">복귀 입력</button>` : ""}
+              <button class="del-btn" data-del="drives" data-id="${d.id}">삭제</button>
+            </div>
           </div>`).join("")}
     </div>`;
 }
@@ -348,20 +354,27 @@ function buildSheetBody(s) {
   if (s === "drive") return `
     <div class="field"><label>차량 *</label><select id="f_vehicleId">${vehOptions()}</select></div>
     <div class="field"><label>운전자 *</label><input id="f_driver" placeholder="홍길동" /></div>
-    <div class="field"><label>날짜 *</label><input type="date" id="f_date" value="${today()}" /></div>
     <div class="grid2">
       <div class="field"><label>출발지 *</label><input id="f_from" placeholder="본사" /></div>
       <div class="field"><label>목적지 *</label><input id="f_to" placeholder="거래처" /></div>
     </div>
-    <div class="grid2">
-      <div class="field"><label>출발 일시</label><input type="datetime-local" id="f_departTime" /></div>
-      <div class="field"><label>도착 일시</label><input type="datetime-local" id="f_arriveTime" /></div>
-    </div>
+    <div class="field"><label>출발 일시 *</label><input type="datetime-local" id="f_departTime" /></div>
     <div class="field"><label>사용 목적</label><input id="f_purpose" placeholder="거래처 방문" /></div>
+    <button class="save-btn" id="saveBtn" style="background:${C.drive}">출발 등록</button>`;
+
+  if (s === "arrive") {
+    const d = state.drives.find(d => d.id === state.sheetId);
+    return `
+    <div style="background:#f8f8f8;border-radius:10px;padding:12px;margin-bottom:16px;font-size:13px;color:#666">
+      <div style="font-weight:500;color:#1a1a1a;margin-bottom:4px">${veh(d?.vehicleId)?.name || "-"} · ${d?.driver || "-"}</div>
+      <div>${d?.from} → ${d?.to}</div>
+      <div style="margin-top:2px">출발: ${d?.departTime?.replace("T"," ") || "-"}</div>
+    </div>
+    <div class="field"><label>도착 일시 *</label><input type="datetime-local" id="f_arriveTime" /></div>
     <div class="field"><label>총주행거리 (km)</label><input type="number" id="f_odometer" placeholder="45231" /></div>
     <div class="field"><label>계기판 사진 (AI 자동 인식)</label><div class="photo-box" id="photoBox"><div style="font-size:28px">📷</div><div style="font-size:12px;color:#aaa">탭하여 업로드</div></div><input type="file" id="photoInput" accept="image/*" style="display:none" /></div>
     <div id="aiMsg" style="display:none"></div>
-    <button class="save-btn" id="saveBtn" style="background:${C.drive}">주행 기록 저장</button>`;
+    <button class="save-btn" id="saveBtn" style="background:${C.drive}">복귀 완료</button>`;
 
   if (s === "maint") return `
     <div class="grid2">
@@ -413,7 +426,9 @@ function bindEvents() {
   // Nav
   document.querySelectorAll("[data-tab]").forEach(btn => btn.onclick = () => setState({ tab: btn.dataset.tab, sheet: null }));
   // Sheet open
-  document.querySelectorAll("[data-sheet]").forEach(btn => btn.onclick = () => { photoDataURL = null; setState({ sheet: btn.dataset.sheet }); });
+  document.querySelectorAll("[data-sheet]").forEach(btn => btn.onclick = () => { photoDataURL = null; setState({ sheet: btn.dataset.sheet, sheetId: null }); });
+  // Arrive sheet
+  document.querySelectorAll("[data-arrive]").forEach(btn => btn.onclick = () => { photoDataURL = null; setState({ sheet: "arrive", sheetId: btn.dataset.arrive }); });
   // Close sheet
   const closeBtn = document.getElementById("closeSheet");
   if (closeBtn) closeBtn.onclick = () => setState({ sheet: null });
@@ -488,10 +503,18 @@ function getVal(id) { const el = document.getElementById(id); return el ? el.val
 async function handleSave() {
   const s = state.sheet;
   if (s === "drive") {
-    const data = { vehicleId: getVal("f_vehicleId"), driver: getVal("f_driver"), date: getVal("f_date"), departTime: getVal("f_departTime"), arriveTime: getVal("f_arriveTime"), from: getVal("f_from"), to: getVal("f_to"), purpose: getVal("f_purpose"), odometer: getVal("f_odometer"), photo: photoDataURL };
-    if (!data.vehicleId || !data.driver || !data.date || !data.from || !data.to) return alert("필수 항목(*)을 모두 입력해주세요.");
+    const data = { vehicleId: getVal("f_vehicleId"), driver: getVal("f_driver"), date: today(), departTime: getVal("f_departTime"), arriveTime: "", from: getVal("f_from"), to: getVal("f_to"), purpose: getVal("f_purpose"), odometer: "", photo: null };
+    if (!data.vehicleId || !data.driver || !data.departTime || !data.from || !data.to) return alert("필수 항목(*)을 모두 입력해주세요.");
     const id = await fsAdd("drives", data);
     setState({ drives: [{ id, ...data, createdAt: Date.now() }, ...state.drives], sheet: null });
+  } else if (s === "arrive") {
+    const arriveTime = getVal("f_arriveTime");
+    const odometer = getVal("f_odometer");
+    if (!arriveTime) return alert("도착 일시를 입력해주세요.");
+    await db.collection ? null : null;
+    const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    await updateDoc(doc(db, "drives", state.sheetId), { arriveTime, odometer, photo: photoDataURL });
+    setState({ drives: state.drives.map(d => d.id === state.sheetId ? { ...d, arriveTime, odometer, photo: photoDataURL } : d), sheet: null });
   } else if (s === "maint") {
     const data = { vehicleId: getVal("f_vehicleId"), date: getVal("f_date"), type: getVal("f_type"), shop: getVal("f_shop"), cost: getVal("f_cost"), note: getVal("f_note"), photo: photoDataURL };
     if (!data.vehicleId || !data.date || !data.type) return alert("필수 항목(*)을 모두 입력해주세요.");
