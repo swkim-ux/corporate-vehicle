@@ -55,6 +55,12 @@
     .spinner-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 1rem; gap: 12px; }
     .spinner { width: 36px; height: 36px; border: 3px solid #eee; border-top: 3px solid #4A90E2; border-radius: 50%; animation: spin .8s linear infinite; }
     .alert-banner { background: #FFF3CD; border: 1px solid #FFCA2C; border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; display: flex; gap: 10px; align-items: flex-start; }
+    .report-stat { background: #f8f8f8; border-radius: 12px; padding: 14px; margin-bottom: 8px; }
+    .report-stat-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+    .report-stat-value { font-size: 18px; font-weight: 500; }
+    .tab-seg { display: flex; gap: 6px; padding: 0 16px 12px; flex-wrap: wrap; }
+    .tab-seg button { padding: 6px 14px; border-radius: 20px; font-size: 13px; border: 1px solid #ddd; background: #fff; cursor: pointer; color: #666; }
+    .tab-seg button.active { background: #4A90E2; color: #fff; border-color: #4A90E2; font-weight: 500; }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
@@ -109,7 +115,8 @@ const dtFmt = s => s ? s.replace("T", " ") : "";
 const C = { drive: "#4A90E2", maint: "#F5A623", fuel: "#E74C3C", veh: "#27AE60" };
 
 // ── State ──────────────────────────────────────────────────
-let S = { tab: "home", sheet: null, sheetId: null, vehicles: [], drives: [], maints: [], fuels: [], loading: true, error: null };
+const firstDay = () => { const d = new Date(); d.setDate(1); return d.toISOString().slice(0,10); };
+let S = { tab: "home", sheet: null, sheetId: null, vehicles: [], drives: [], maints: [], fuels: [], loading: true, error: null, rVid: "all", rFrom: firstDay(), rTo: today(), rTab: "drive" };
 let photoDataURL = null;
 const veh = id => S.vehicles.find(v => v.id === id);
 const set = patch => { S = { ...S, ...patch }; render(); };
@@ -125,6 +132,7 @@ function render() {
   else if (S.tab === "drive") html = renderDrives();
   else if (S.tab === "maint") html = renderMaints();
   else if (S.tab === "fuel") html = renderFuels();
+  else if (S.tab === "report") html = renderReport();
   else if (S.tab === "veh") html = renderVehs();
 
   const navHtml = `<nav class="bottom-nav">${[
@@ -132,6 +140,7 @@ function render() {
     { id:"drive", icon:"🚗", label:"주행" },
     { id:"maint", icon:"🔧", label:"정비" },
     { id:"fuel", icon:"⛽", label:"주유" },
+    { id:"report", icon:"📊", label:"리포트" },
     { id:"veh", icon:"📋", label:"차량" },
   ].map(t => `<button class="nav-btn${S.tab===t.id?" active":""}" data-tab="${t.id}"><span class="icon">${t.icon}</span><span class="label">${t.label}</span></button>`).join("")}</nav>`;
 
@@ -233,7 +242,96 @@ function renderHome() {
     </div>` : ""}`;
 }
 
-// ── Drives ─────────────────────────────────────────────────
+// ── Report ─────────────────────────────────────────────────
+function renderReport() {
+  const { rVid, rFrom, rTo, rTab } = S;
+  const inRange = date => date && date >= rFrom && date <= rTo;
+  const byVeh = arr => rVid === "all" ? arr : arr.filter(x => x.vehicleId === rVid);
+
+  const filteredDrives = byVeh(S.drives).filter(d => inRange(d.date || (d.departTime||"").slice(0,10)));
+  const filteredMaints = byVeh(S.maints).filter(m => inRange(m.date));
+  const filteredFuels = byVeh(S.fuels).filter(f => inRange(f.date));
+
+  const totalMaint = filteredMaints.reduce((s,m) => s+(Number(m.cost)||0), 0);
+  const totalFuel = filteredFuels.reduce((s,f) => s+(Number(f.amount)||0), 0);
+  const totalLiters = filteredFuels.reduce((s,f) => s+(Number(f.liters)||0), 0);
+
+  const statCards = rTab === "drive"
+    ? [
+        { label:"주행 건수", value: filteredDrives.length+"건", color: C.drive },
+        { label:"운행 차량 수", value: [...new Set(filteredDrives.map(d=>d.vehicleId))].length+"대", color: C.veh },
+      ]
+    : rTab === "maint"
+    ? [
+        { label:"정비 건수", value: filteredMaints.length+"건", color: C.maint },
+        { label:"총 정비 비용", value: numFmt(totalMaint)+"원", color: C.maint },
+      ]
+    : [
+        { label:"주유 건수", value: filteredFuels.length+"건", color: C.fuel },
+        { label:"총 주유량", value: totalLiters.toFixed(1)+"L", color: C.fuel },
+        { label:"총 주유 금액", value: numFmt(totalFuel)+"원", color: C.fuel },
+      ];
+
+  const listHtml = rTab === "drive"
+    ? (filteredDrives.length === 0 ? `<div class="empty"><div class="eicon">🚗</div><div>해당 기간 주행 기록 없음</div></div>` :
+        filteredDrives.map(d => `<div class="card">
+          <div class="row">
+            <span class="badge" style="background:${C.drive}22;color:${C.drive}">${veh(d.vehicleId)?.name||"-"}</span>
+            <span style="font-size:12px;color:#888">${d.date||""}</span>
+            ${!d.arriveTime ? `<span style="background:#E74C3C22;color:#E74C3C;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:500">🔴 운행 중</span>` : `<span style="background:#27AE6022;color:#27AE60;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:500">🟢 복귀</span>`}
+          </div>
+          <div class="card-title">${d.from} → ${d.to}</div>
+          <div class="card-sub">${d.driver||""}${d.departTime?` · 출발 ${dtFmt(d.departTime)}`:""}${d.arriveTime?` · 도착 ${dtFmt(d.arriveTime)}`:""}${d.odometer?` · 총 ${numFmt(d.odometer)}km`:""}</div>
+          ${d.purpose?`<div style="font-size:12px;color:#aaa;margin-top:2px">${d.purpose}</div>`:""}
+        </div>`).join(""))
+    : rTab === "maint"
+    ? (filteredMaints.length === 0 ? `<div class="empty"><div class="eicon">🔧</div><div>해당 기간 정비 기록 없음</div></div>` :
+        filteredMaints.map(m => `<div class="card">
+          <div class="row">
+            <span class="badge" style="background:${C.maint}22;color:${C.maint}">${veh(m.vehicleId)?.name||"-"}</span>
+            <span style="font-size:12px;color:#888">${m.date}</span>
+          </div>
+          <div class="card-title">${m.type}</div>
+          <div class="card-sub">${m.shop||""}${m.cost?` · ${numFmt(m.cost)}원`:""}</div>
+        </div>`).join(""))
+    : (filteredFuels.length === 0 ? `<div class="empty"><div class="eicon">⛽</div><div>해당 기간 주유 기록 없음</div></div>` :
+        filteredFuels.map(f => `<div class="card">
+          <div class="row">
+            <span class="badge" style="background:${C.fuel}22;color:${C.fuel}">${veh(f.vehicleId)?.name||"-"}</span>
+            <span style="font-size:12px;color:#888">${f.date}</span>
+          </div>
+          <div class="card-title">${f.station||"주유소"}</div>
+          <div class="card-sub">${f.liters?f.liters+"L":""}${f.amount?` · ${numFmt(f.amount)}원`:""}${f.driver?` · ${f.driver}`:""}</div>
+        </div>`).join(""));
+
+  return `
+    <div class="sec-header"><h2>리포트</h2></div>
+    <div style="padding:0 16px 12px">
+      <div class="field"><label>차량</label>
+        <select id="r_vid">
+          <option value="all"${rVid==="all"?" selected":""}>전체 차량</option>
+          ${S.vehicles.map(v=>`<option value="${v.id}"${rVid===v.id?" selected":""}>${v.name} (${v.plate})</option>`).join("")}
+        </select>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>시작일</label><input type="date" id="r_from" value="${rFrom}" /></div>
+        <div class="field"><label>종료일</label><input type="date" id="r_to" value="${rTo}" /></div>
+      </div>
+    </div>
+    <div class="tab-seg">
+      <button class="${rTab==="drive"?"active":""}" data-rtab="drive">🚗 주행</button>
+      <button class="${rTab==="maint"?"active":""}" data-rtab="maint">🔧 정비</button>
+      <button class="${rTab==="fuel"?"active":""}" data-rtab="fuel">⛽ 주유</button>
+    </div>
+    <div style="padding:0 16px">
+      <div style="display:grid;grid-template-columns:repeat(${statCards.length>2?"3":"2"},1fr);gap:8px;margin-bottom:12px">
+        ${statCards.map(c=>`<div class="report-stat"><div class="report-stat-label">${c.label}</div><div class="report-stat-value" style="color:${c.color}">${c.value}</div></div>`).join("")}
+      </div>
+      ${listHtml}
+    </div>`;
+}
+
+
 function renderDrives() {
   return `
     <div class="sec-header"><h2>주행 기록</h2><button class="add-btn" style="background:${C.drive}" data-sheet="drive">+ 출발</button></div>
@@ -420,6 +518,13 @@ function bindEvents() {
   document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => set({ tab: b.dataset.tab, sheet: null }));
   document.querySelectorAll("[data-sheet]").forEach(b => b.onclick = () => { photoDataURL = null; set({ sheet: b.dataset.sheet, sheetId: null }); });
   document.querySelectorAll("[data-arrive]").forEach(b => b.onclick = () => { photoDataURL = null; set({ sheet: "arrive", sheetId: b.dataset.arrive }); });
+  document.querySelectorAll("[data-rtab]").forEach(b => b.onclick = () => set({ rTab: b.dataset.rtab }));
+  const rVid = document.getElementById("r_vid");
+  const rFrom = document.getElementById("r_from");
+  const rTo = document.getElementById("r_to");
+  if (rVid) rVid.onchange = () => set({ rVid: rVid.value });
+  if (rFrom) rFrom.onchange = () => set({ rFrom: rFrom.value });
+  if (rTo) rTo.onchange = () => set({ rTo: rTo.value });
   document.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
     if (!confirm("삭제할까요?")) return;
     await fsDel(b.dataset.del, b.dataset.id);
