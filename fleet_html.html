@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>법인차량 관리</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #1a1a1a; }
+    #app { max-width: 480px; margin: 0 auto; background: #fff; min-height: 100vh; padding-bottom: 72px; }
+
+    /* Nav */
+    .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: #fff; border-top: 1px solid #e5e5e5; display: flex; z-index: 500; padding-bottom: env(safe-area-inset-bottom, 0); }
+    .nav-btn { flex: 1; background: none; border: none; cursor: pointer; padding: 10px 0 8px; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .nav-btn .icon { font-size: 20px; }
+    .nav-btn .label { font-size: 10px; color: #999; }
+    .nav-btn.active .label { color: #4A90E2; font-weight: 500; }
+
+    /* Sections */
+    .sec-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 16px 10px; }
+    .sec-header h2 { font-size: 18px; font-weight: 500; }
+    .add-btn { border: none; border-radius: 20px; padding: 6px 16px; font-size: 13px; cursor: pointer; font-weight: 500; color: #fff; }
+    .content { padding: 0 16px; }
+
+    /* Cards */
+    .card { background: #fff; border: 0.5px solid #e0e0e0; border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; }
+    .card-footer { display: flex; justify-content: flex-end; margin-top: 8px; padding-top: 8px; border-top: 0.5px solid #f0f0f0; }
+    .del-btn { font-size: 12px; color: #999; background: none; border: none; cursor: pointer; padding: 2px 8px; }
+    .badge { border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
+    .card-title { font-size: 14px; font-weight: 500; margin-bottom: 2px; }
+    .card-sub { font-size: 12px; color: #888; }
+    .thumb { width: 68px; height: 50px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+    .pdf-thumb { width: 68px; height: 50px; border-radius: 8px; background: #f5f5f5; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+    .empty { text-align: center; padding: 3rem 1rem; color: #bbb; }
+    .empty .eicon { font-size: 40px; margin-bottom: 10px; }
+
+    /* Bottom Sheet */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 999; display: flex; flex-direction: column; justify-content: flex-end; }
+    .sheet { background: #fff; border-radius: 20px 20px 0 0; max-height: 92vh; overflow-y: auto; padding-bottom: 24px; }
+    .sheet-handle { display: flex; justify-content: center; padding: 12px 0 4px; }
+    .handle-bar { width: 40px; height: 4px; border-radius: 2px; background: #ddd; }
+    .sheet-header { display: flex; justify-content: space-between; align-items: center; padding: 6px 20px 14px; }
+    .sheet-header h2 { font-size: 17px; font-weight: 500; }
+    .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #999; line-height: 1; }
+    .sheet-body { padding: 0 20px; }
+    .field { margin-bottom: 14px; }
+    .field label { font-size: 13px; color: #666; display: block; margin-bottom: 5px; }
+    .field input, .field select, .field textarea { width: 100%; font-size: 16px; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; background: #fff; }
+    .field textarea { height: 80px; resize: none; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .photo-box { border: 1.5px dashed #ddd; border-radius: 10px; min-height: 80px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 6px; cursor: pointer; background: #fafafa; padding: 8px; }
+    .photo-box img { max-height: 110px; max-width: 100%; border-radius: 8px; object-fit: contain; }
+    .save-btn { width: 100%; padding: 14px; border-radius: 12px; color: #fff; border: none; cursor: pointer; font-size: 16px; font-weight: 500; margin-top: 4px; }
+    .ai-msg { font-size: 13px; padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; }
+    .ai-loading { color: #4A90E2; background: #e8f0fe; }
+    .ai-done { color: #27AE60; background: #e8f7f0; }
+
+    /* Home stats */
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 8px 16px; }
+    .stat-card { background: #f8f8f8; border-radius: 12px; padding: 14px; }
+    .stat-label { font-size: 12px; color: #888; margin-bottom: 6px; }
+    .stat-value { font-size: 20px; font-weight: 500; }
+    .veh-card { background: #fff; border: 0.5px solid #e0e0e0; border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; }
+    .veh-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+
+    /* Spinner */
+    .spinner-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 1rem; gap: 12px; }
+    .spinner { width: 36px; height: 36px; border: 3px solid #eee; border-top: 3px solid #4A90E2; border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Error */
+    .error-wrap { padding: 2rem; text-align: center; }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+
+<script type="module">
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, orderBy, query } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ── Firebase 설정 ──────────────────────────────────────────
+const FB_CONFIG = {
+  apiKey: "AIzaSyCPvMbFfXHUgkYfJ3ZRcp5ypATRo8xLOAo",
+  authDomain: "corporate-vehicle.firebaseapp.com",
+  projectId: "corporate-vehicle",
+  storageBucket: "corporate-vehicle.firebasestorage.app",
+  messagingSenderId: "419510195247",
+  appId: "1:419510195247:web:602f11bb4696102b1ca2da"
+};
+const fbApp = getApps().length ? getApps()[0] : initializeApp(FB_CONFIG);
+const db = getFirestore(fbApp);
+
+async function fsGet(col) {
+  const q = query(collection(db, col), orderBy("createdAt", "desc"));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+async function fsAdd(col, data) {
+  const ref = await addDoc(collection(db, col), { ...data, createdAt: Date.now() });
+  return ref.id;
+}
+async function fsDel(col, id) { await deleteDoc(doc(db, col, id)); }
+
+// ── Claude AI ──────────────────────────────────────────────
+const GEMINI_KEY = "AIzaSyAhYeWAWNx5r-EljO466VjN6tvVaYllLig";
+async function callClaude(messages, system) {
+  const parts = [];
+  for (const msg of messages) {
+    if (typeof msg.content === "string") {
+      parts.push({ text: msg.content });
+    } else {
+      for (const c of msg.content) {
+        if (c.type === "text") parts.push({ text: c.text });
+        else if (c.type === "image") parts.push({ inlineData: { mimeType: c.source.media_type, data: c.source.data } });
+        else if (c.type === "document") parts.push({ inlineData: { mimeType: "application/pdf", data: c.source.data } });
+      }
+    }
+  }
+  if (system) parts.unshift({ text: system });
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contents: [{ parts }] })
+  });
+  const d = await r.json();
+  return d.candidates?.[0]?.content?.parts?.[0]?.text || "";
+}
+
+// ── Helpers ────────────────────────────────────────────────
+const toB64 = f => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result.split(",")[1]); r.onerror = rej; r.readAsDataURL(f); });
+const toDataURL = f => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
+const today = () => new Date().toISOString().slice(0, 10);
+const numFmt = n => Number(n).toLocaleString();
+const C = { drive: "#4A90E2", maint: "#F5A623", fuel: "#E74C3C", veh: "#27AE60" };
+
+// ── State ──────────────────────────────────────────────────
+let state = { tab: "home", sheet: null, vehicles: [], drives: [], maints: [], fuels: [], loading: true, error: null };
+const veh = id => state.vehicles.find(v => v.id === id);
+
+function setState(patch) { state = { ...state, ...patch }; render(); }
+
+// ── Render ─────────────────────────────────────────────────
+function render() {
+  const app = document.getElementById("app");
+  app.innerHTML = "";
+
+  if (state.loading) { app.innerHTML = `<div class="spinner-wrap"><div class="spinner"></div><div style="font-size:13px;color:#888">불러오는 중...</div></div>`; return; }
+  if (state.error) { app.innerHTML = `<div class="error-wrap"><div style="font-size:36px;margin-bottom:12px">⚠️</div><div style="font-size:15px;font-weight:500;margin-bottom:8px">Firebase 연결 실패</div><div style="font-size:13px;color:#888;margin-bottom:16px">${state.error}</div><button onclick="window.retryLoad()" style="padding:10px 24px;border-radius:10px;background:#4A90E2;color:#fff;border:none;cursor:pointer;font-size:14px">다시 시도</button></div>`; return; }
+
+  const main = document.createElement("div");
+  if (state.tab === "home") main.innerHTML = renderHome();
+  else if (state.tab === "drive") main.innerHTML = renderDriveList();
+  else if (state.tab === "maint") main.innerHTML = renderMaintList();
+  else if (state.tab === "fuel") main.innerHTML = renderFuelList();
+  else if (state.tab === "veh") main.innerHTML = renderVehList();
+  app.appendChild(main);
+
+  app.appendChild(buildNav());
+
+  if (state.sheet) {
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    overlay.onclick = e => { if (e.target === overlay) setState({ sheet: null }); };
+    overlay.appendChild(buildSheet());
+    app.appendChild(overlay);
+  }
+
+  bindEvents();
+}
+
+// ── Nav ────────────────────────────────────────────────────
+function buildNav() {
+  const nav = document.createElement("nav");
+  nav.className = "bottom-nav";
+  const tabs = [
+    { id: "home", icon: "🏠", label: "홈" },
+    { id: "drive", icon: "🚗", label: "주행" },
+    { id: "maint", icon: "🔧", label: "정비" },
+    { id: "fuel", icon: "⛽", label: "주유" },
+    { id: "veh", icon: "📋", label: "차량" },
+  ];
+  nav.innerHTML = tabs.map(t => `<button class="nav-btn${state.tab === t.id ? " active" : ""}" data-tab="${t.id}"><span class="icon">${t.icon}</span><span class="label">${t.label}</span></button>`).join("");
+  return nav;
+}
+
+// ── Home ───────────────────────────────────────────────────
+function renderHome() {
+  const totalMaint = state.maints.reduce((s, m) => s + (Number(m.cost) || 0), 0);
+  const totalFuel = state.fuels.reduce((s, f) => s + (Number(f.amount) || 0), 0);
+  const recent = [...state.drives].slice(0, 3);
+  return `
+    <div style="padding:20px 16px 8px">
+      <h1 style="font-size:20px;font-weight:500">법인차량 관리</h1>
+      <div style="font-size:13px;color:#888;margin-top:2px">${new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" })}</div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-label">등록 차량</div><div class="stat-value" style="color:${C.veh}">${state.vehicles.length}대</div></div>
+      <div class="stat-card"><div class="stat-label">주행 기록</div><div class="stat-value" style="color:${C.drive}">${state.drives.length}건</div></div>
+      <div class="stat-card"><div class="stat-label">정비 비용</div><div class="stat-value" style="color:${C.maint}">${numFmt(totalMaint)}원</div></div>
+      <div class="stat-card"><div class="stat-label">주유 금액</div><div class="stat-value" style="color:${C.fuel}">${numFmt(totalFuel)}원</div></div>
+    </div>
+    <div style="padding:12px 16px 6px">
+      <div style="font-size:15px;font-weight:500;margin-bottom:10px">차량 현황</div>
+      ${state.vehicles.length === 0 ? `<div style="font-size:13px;color:#bbb">등록된 차량이 없습니다.</div>` :
+        state.vehicles.map(v => `
+          <div class="veh-card">
+            <div class="veh-icon" style="background:${v.color || C.drive}22">🚗</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:500;font-size:14px">${v.name}</div>
+              <div style="font-size:12px;color:#888">${v.plate}${v.dept ? ` · ${v.dept}` : ""}</div>
+            </div>
+            <div style="text-align:right;font-size:12px;color:#888">
+              <div>주행 ${state.drives.filter(d => d.vehicleId === v.id).length}건</div>
+              <div>정비 ${state.maints.filter(m => m.vehicleId === v.id).length}건</div>
+            </div>
+          </div>`).join("")}
+    </div>
+    ${recent.length > 0 ? `
+    <div style="padding:8px 16px 16px">
+      <div style="font-size:15px;font-weight:500;margin-bottom:10px">최근 주행</div>
+      ${recent.map(d => `
+        <div style="background:#f8f8f8;border-radius:10px;padding:10px 12px;margin-bottom:6px">
+          <div style="display:flex;justify-content:space-between">
+            <span style="font-size:13px;font-weight:500">${veh(d.vehicleId)?.name || "-"}</span>
+            <span style="font-size:12px;color:#888">${d.date}</span>
+          </div>
+          <div style="font-size:13px;color:#666;margin-top:2px">${d.from} → ${d.to}</div>
+          ${d.driver ? `<div style="font-size:12px;color:#aaa;margin-top:1px">${d.driver}</div>` : ""}
+        </div>`).join("")}
+    </div>` : ""}`;
+}
+
+// ── Drive List ─────────────────────────────────────────────
+function renderDriveList() {
+  return `
+    <div class="sec-header"><h2>주행 기록</h2><button class="add-btn" style="background:${C.drive}" data-sheet="drive">+ 추가</button></div>
+    <div class="content">
+      ${state.drives.length === 0 ? `<div class="empty"><div class="eicon">🚗</div><div>주행 기록이 없습니다</div></div>` :
+        state.drives.map(d => `
+          <div class="card">
+            <div style="display:flex;gap:10px">
+              ${d.photo ? `<img class="thumb" src="${d.photo}" />` : ""}
+              <div style="flex:1;min-width:0">
+                <div class="row">
+                  <span class="badge" style="background:${C.drive}22;color:${C.drive}">${veh(d.vehicleId)?.name || "-"}</span>
+                  <span style="font-size:12px;color:#888">${d.date}</span>
+                </div>
+                <div class="card-title">${d.from} → ${d.to}</div>
+                <div class="card-sub">
+                  ${d.driver ? d.driver : ""}
+                  ${d.departTime && d.arriveTime ? ` · ${d.departTime}~${d.arriveTime}` : ""}
+                  ${d.odometer ? ` · 총 ${numFmt(d.odometer)}km` : ""}
+                </div>
+                ${d.purpose ? `<div style="font-size:12px;color:#aaa;margin-top:2px">${d.purpose}</div>` : ""}
+              </div>
+            </div>
+            <div class="card-footer"><button class="del-btn" data-del="drives" data-id="${d.id}">삭제</button></div>
+          </div>`).join("")}
+    </div>`;
+}
+
+// ── Maint List ─────────────────────────────────────────────
+function renderMaintList() {
+  return `
+    <div class="sec-header"><h2>정비 기록</h2><button class="add-btn" style="background:${C.maint}" data-sheet="maint">+ 추가</button></div>
+    <div class="content">
+      ${state.maints.length === 0 ? `<div class="empty"><div class="eicon">🔧</div><div>정비 기록이 없습니다</div></div>` :
+        state.maints.map(m => `
+          <div class="card">
+            <div style="display:flex;gap:10px">
+              ${m.photo ? (m.photo.startsWith("data:application/pdf") ? `<div class="pdf-thumb">📄</div>` : `<img class="thumb" src="${m.photo}" />`) : ""}
+              <div style="flex:1;min-width:0">
+                <div class="row">
+                  <span class="badge" style="background:${C.maint}22;color:${C.maint}">${veh(m.vehicleId)?.name || "-"}</span>
+                  <span style="font-size:12px;color:#888">${m.date}</span>
+                </div>
+                <div class="card-title">${m.type}</div>
+                <div class="card-sub">${m.shop || ""}${m.cost ? ` · ${numFmt(m.cost)}원` : ""}</div>
+                ${m.note ? `<div style="font-size:12px;color:#aaa;margin-top:2px">${m.note}</div>` : ""}
+                ${m.aiResult ? `<div style="font-size:11px;color:#27AE60;background:#27AE6011;padding:3px 8px;border-radius:6px;margin-top:4px">AI: ${m.aiResult}</div>` : ""}
+              </div>
+            </div>
+            <div class="card-footer"><button class="del-btn" data-del="maints" data-id="${m.id}">삭제</button></div>
+          </div>`).join("")}
+    </div>`;
+}
+
+// ── Fuel List ──────────────────────────────────────────────
+function renderFuelList() {
+  return `
+    <div class="sec-header"><h2>주유 기록</h2><button class="add-btn" style="background:${C.fuel}" data-sheet="fuel">+ 추가</button></div>
+    <div class="content">
+      ${state.fuels.length === 0 ? `<div class="empty"><div class="eicon">⛽</div><div>주유 기록이 없습니다</div></div>` :
+        state.fuels.map(f => `
+          <div class="card">
+            <div style="display:flex;gap:10px">
+              ${f.photo ? `<img class="thumb" src="${f.photo}" />` : ""}
+              <div style="flex:1;min-width:0">
+                <div class="row">
+                  <span class="badge" style="background:${C.fuel}22;color:${C.fuel}">${veh(f.vehicleId)?.name || "-"}</span>
+                  <span style="font-size:12px;color:#888">${f.date}</span>
+                </div>
+                <div class="card-title">${f.station || "주유소"}</div>
+                <div class="card-sub">${f.liters ? f.liters + "L" : ""}${f.amount ? ` · ${numFmt(f.amount)}원` : ""}${f.driver ? ` · ${f.driver}` : ""}</div>
+              </div>
+            </div>
+            <div class="card-footer"><button class="del-btn" data-del="fuels" data-id="${f.id}">삭제</button></div>
+          </div>`).join("")}
+    </div>`;
+}
+
+// ── Veh List ───────────────────────────────────────────────
+function renderVehList() {
+  return `
+    <div class="sec-header"><h2>차량 관리</h2><button class="add-btn" style="background:${C.veh}" data-sheet="veh">+ 추가</button></div>
+    <div class="content">
+      ${state.vehicles.length === 0 ? `<div class="empty"><div class="eicon">📋</div><div>등록된 차량이 없습니다</div></div>` :
+        state.vehicles.map(v => `
+          <div class="veh-card">
+            <div class="veh-icon" style="background:${v.color || C.drive}22">🚗</div>
+            <div style="flex:1">
+              <div style="font-weight:500;font-size:15px">${v.name}</div>
+              <div style="font-size:13px;color:#888">${v.plate}${v.dept ? ` · ${v.dept}` : ""}</div>
+            </div>
+            <button class="del-btn" data-del="vehicles" data-id="${v.id}">삭제</button>
+          </div>`).join("")}
+    </div>`;
+}
+
+// ── Sheets ─────────────────────────────────────────────────
+function buildSheet() {
+  const s = state.sheet;
+  const titles = { drive: "주행 기록 추가", maint: "정비 기록 추가", fuel: "주유 기록 추가", veh: "차량 등록" };
+  const div = document.createElement("div");
+  div.className = "sheet";
+  div.innerHTML = `
+    <div class="sheet-handle"><div class="handle-bar"></div></div>
+    <div class="sheet-header"><h2>${titles[s]}</h2><button class="close-btn" id="closeSheet">×</button></div>
+    <div class="sheet-body">${buildSheetBody(s)}</div>`;
+  return div;
+}
+
+const vehOptions = () => state.vehicles.map(v => `<option value="${v.id}">${v.name} (${v.plate})</option>`).join("");
+
+function buildSheetBody(s) {
+  if (s === "drive") return `
+    <div class="field"><label>차량 *</label><select id="f_vehicleId">${vehOptions()}</select></div>
+    <div class="field"><label>운전자 *</label><input id="f_driver" placeholder="홍길동" /></div>
+    <div class="field"><label>날짜 *</label><input type="date" id="f_date" value="${today()}" /></div>
+    <div class="grid2">
+      <div class="field"><label>출발지 *</label><input id="f_from" placeholder="본사" /></div>
+      <div class="field"><label>목적지 *</label><input id="f_to" placeholder="거래처" /></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>출발 시각</label><input type="time" id="f_departTime" /></div>
+      <div class="field"><label>도착 시각</label><input type="time" id="f_arriveTime" /></div>
+    </div>
+    <div class="field"><label>사용 목적</label><input id="f_purpose" placeholder="거래처 방문" /></div>
+    <div class="field"><label>총주행거리 (km)</label><input type="number" id="f_odometer" placeholder="45231" /></div>
+    <div class="field"><label>계기판 사진 (AI 자동 인식)</label><div class="photo-box" id="photoBox"><div style="font-size:28px">📷</div><div style="font-size:12px;color:#aaa">탭하여 업로드</div></div><input type="file" id="photoInput" accept="image/*" style="display:none" /></div>
+    <div id="aiMsg" style="display:none"></div>
+    <button class="save-btn" id="saveBtn" style="background:${C.drive}">주행 기록 저장</button>`;
+
+  if (s === "maint") return `
+    <div class="grid2">
+      <div class="field"><label>차량 *</label><select id="f_vehicleId">${vehOptions()}</select></div>
+      <div class="field"><label>날짜 *</label><input type="date" id="f_date" value="${today()}" /></div>
+    </div>
+    <div class="field"><label>명세표/등록증 업로드 (PDF·이미지, AI 자동 인식)</label><div class="photo-box" id="photoBox"><div style="font-size:28px">📷</div><div style="font-size:12px;color:#aaa">탭하여 업로드</div></div><input type="file" id="photoInput" accept="image/*,application/pdf" style="display:none" /></div>
+    <div id="aiMsg" style="display:none"></div>
+    <div class="field"><label>정비 항목 *</label><input id="f_type" placeholder="엔진오일 교환" /></div>
+    <div class="grid2">
+      <div class="field"><label>정비소</label><input id="f_shop" placeholder="○○ 자동차" /></div>
+      <div class="field"><label>비용 (원)</label><input type="number" id="f_cost" placeholder="50000" /></div>
+    </div>
+    <div class="field"><label>메모</label><input id="f_note" placeholder="추가 메모" /></div>
+    <button class="save-btn" id="saveBtn" style="background:${C.maint}">정비 기록 저장</button>`;
+
+  if (s === "fuel") return `
+    <div class="grid2">
+      <div class="field"><label>차량 *</label><select id="f_vehicleId">${vehOptions()}</select></div>
+      <div class="field"><label>날짜 *</label><input type="date" id="f_date" value="${today()}" /></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>운전자</label><input id="f_driver" placeholder="홍길동" /></div>
+      <div class="field"><label>주유소</label><input id="f_station" placeholder="GS칼텍스" /></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>주유량 (L)</label><input type="number" step="0.1" id="f_liters" placeholder="45.5" /></div>
+      <div class="field"><label>금액 (원)</label><input type="number" id="f_amount" placeholder="80000" /></div>
+    </div>
+    <div class="field"><label>영수증 사진</label><div class="photo-box" id="photoBox"><div style="font-size:28px">📷</div><div style="font-size:12px;color:#aaa">탭하여 업로드</div></div><input type="file" id="photoInput" accept="image/*" style="display:none" /></div>
+    <button class="save-btn" id="saveBtn" style="background:${C.fuel}">주유 기록 저장</button>`;
+
+  if (s === "veh") return `
+    <div class="grid2">
+      <div class="field"><label>차량명 *</label><input id="f_name" placeholder="쏘렌토" /></div>
+      <div class="field"><label>번호판 *</label><input id="f_plate" placeholder="12가 3456" /></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>담당 부서</label><input id="f_dept" placeholder="총무팀" /></div>
+      <div class="field"><label>색상</label><input type="color" id="f_color" value="#4A90E2" style="height:42px;padding:4px;cursor:pointer" /></div>
+    </div>
+    <button class="save-btn" id="saveBtn" style="background:${C.veh}">차량 등록</button>`;
+}
+
+// ── Events ─────────────────────────────────────────────────
+let photoDataURL = null;
+
+function bindEvents() {
+  // Nav
+  document.querySelectorAll("[data-tab]").forEach(btn => btn.onclick = () => setState({ tab: btn.dataset.tab, sheet: null }));
+  // Sheet open
+  document.querySelectorAll("[data-sheet]").forEach(btn => btn.onclick = () => { photoDataURL = null; setState({ sheet: btn.dataset.sheet }); });
+  // Close sheet
+  const closeBtn = document.getElementById("closeSheet");
+  if (closeBtn) closeBtn.onclick = () => setState({ sheet: null });
+  // Delete
+  document.querySelectorAll("[data-del]").forEach(btn => btn.onclick = async () => {
+    if (!confirm("삭제할까요?")) return;
+    await fsDel(btn.dataset.del, btn.dataset.id);
+    const map = { drives: "drives", maints: "maints", fuels: "fuels", vehicles: "vehicles" };
+    const key = map[btn.dataset.del];
+    setState({ [key]: state[key].filter(x => x.id !== btn.dataset.id) });
+  });
+  // Photo
+  const photoBox = document.getElementById("photoBox");
+  const photoInput = document.getElementById("photoInput");
+  if (photoBox && photoInput) {
+    photoBox.onclick = () => photoInput.click();
+    photoInput.onchange = async e => {
+      const file = e.target.files[0]; if (!file) return;
+      photoDataURL = await toDataURL(file);
+      photoBox.innerHTML = file.type === "application/pdf"
+        ? `<div style="font-size:13px;color:#666">📄 PDF 등록됨</div>`
+        : `<img src="${photoDataURL}" style="max-height:110px;max-width:100%;border-radius:8px;object-fit:contain" />`;
+      if (state.sheet === "drive" || state.sheet === "maint") await runAI(file);
+    };
+  }
+  // Save
+  const saveBtn = document.getElementById("saveBtn");
+  if (saveBtn) saveBtn.onclick = () => handleSave();
+  // Retry
+  window.retryLoad = loadData;
+}
+
+function showAiMsg(msg, loading) {
+  const el = document.getElementById("aiMsg");
+  if (!el) return;
+  el.style.display = "block";
+  el.className = `ai-msg ${loading ? "ai-loading" : "ai-done"}`;
+  el.textContent = (loading ? "⏳ " : "✅ ") + msg;
+}
+
+async function runAI(file) {
+  if (state.sheet === "drive") {
+    showAiMsg("AI가 계기판 숫자를 인식 중...", true);
+    try {
+      const b64 = await toB64(file);
+      const resp = await callClaude([{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: file.type, data: b64 } }, { type: "text", text: "이 계기판 사진에서 총주행거리(ODO km)를 읽어주세요. 숫자만 답하세요. 예: 45231" }] }], "자동차 계기판에서 총주행거리를 추출하세요. 숫자만 반환.");
+      const km = resp.replace(/[^0-9]/g, "");
+      const el = document.getElementById("f_odometer");
+      if (km && el) { el.value = km; showAiMsg(`총주행거리 인식 완료: ${numFmt(km)}km`, false); }
+      else showAiMsg("인식 실패. 직접 입력해주세요.", false);
+    } catch { showAiMsg("인식 실패. 직접 입력해주세요.", false); }
+  } else if (state.sheet === "maint") {
+    showAiMsg("AI가 문서를 분석 중...", true);
+    try {
+      const b64 = await toB64(file);
+      const isP = file.type === "application/pdf";
+      const content = isP
+        ? [{ type: "document", source: { type: "base64", media_type: "application/pdf", data: b64 } }, { type: "text", text: '정비 명세표에서 정비항목, 정비소, 총비용을 추출하세요. JSON만: {"type":"...","shop":"...","cost":"..."}' }]
+        : [{ type: "image", source: { type: "base64", media_type: file.type, data: b64 } }, { type: "text", text: '정비 명세표에서 정비항목, 정비소, 총비용을 추출하세요. JSON만: {"type":"...","shop":"...","cost":"..."}' }];
+      const resp = await callClaude([{ role: "user", content }], "자동차 정비 명세표 분석. JSON만 반환.");
+      const parsed = JSON.parse(resp.replace(/```json|```/g, "").trim());
+      if (parsed.type) document.getElementById("f_type").value = parsed.type;
+      if (parsed.shop) document.getElementById("f_shop").value = parsed.shop;
+      if (parsed.cost) document.getElementById("f_cost").value = parsed.cost.toString().replace(/[^0-9]/g, "");
+      showAiMsg("AI 자동 입력 완료!", false);
+    } catch { showAiMsg("분석 완료. 내용을 확인해주세요.", false); }
+  }
+}
+
+function getVal(id) { const el = document.getElementById(id); return el ? el.value : ""; }
+
+async function handleSave() {
+  const s = state.sheet;
+  if (s === "drive") {
+    const data = { vehicleId: getVal("f_vehicleId"), driver: getVal("f_driver"), date: getVal("f_date"), departTime: getVal("f_departTime"), arriveTime: getVal("f_arriveTime"), from: getVal("f_from"), to: getVal("f_to"), purpose: getVal("f_purpose"), odometer: getVal("f_odometer"), photo: photoDataURL };
+    if (!data.vehicleId || !data.driver || !data.date || !data.from || !data.to) return alert("필수 항목(*)을 모두 입력해주세요.");
+    const id = await fsAdd("drives", data);
+    setState({ drives: [{ id, ...data, createdAt: Date.now() }, ...state.drives], sheet: null });
+  } else if (s === "maint") {
+    const data = { vehicleId: getVal("f_vehicleId"), date: getVal("f_date"), type: getVal("f_type"), shop: getVal("f_shop"), cost: getVal("f_cost"), note: getVal("f_note"), photo: photoDataURL };
+    if (!data.vehicleId || !data.date || !data.type) return alert("필수 항목(*)을 모두 입력해주세요.");
+    const id = await fsAdd("maints", data);
+    setState({ maints: [{ id, ...data, createdAt: Date.now() }, ...state.maints], sheet: null });
+  } else if (s === "fuel") {
+    const data = { vehicleId: getVal("f_vehicleId"), date: getVal("f_date"), driver: getVal("f_driver"), station: getVal("f_station"), liters: getVal("f_liters"), amount: getVal("f_amount"), photo: photoDataURL };
+    if (!data.vehicleId || !data.date) return alert("필수 항목(*)을 입력해주세요.");
+    const id = await fsAdd("fuels", data);
+    setState({ fuels: [{ id, ...data, createdAt: Date.now() }, ...state.fuels], sheet: null });
+  } else if (s === "veh") {
+    const data = { name: getVal("f_name"), plate: getVal("f_plate"), dept: getVal("f_dept"), color: getVal("f_color") };
+    if (!data.name || !data.plate) return alert("차량명과 번호판을 입력해주세요.");
+    const id = await fsAdd("vehicles", data);
+    setState({ vehicles: [...state.vehicles, { id, ...data, createdAt: Date.now() }], sheet: null });
+  }
+}
+
+// ── Load ───────────────────────────────────────────────────
+async function loadData() {
+  setState({ loading: true, error: null });
+  try {
+    const [v, d, m, f] = await Promise.all([fsGet("vehicles"), fsGet("drives"), fsGet("maints"), fsGet("fuels")]);
+    setState({ vehicles: v, drives: d, maints: m, fuels: f, loading: false });
+  } catch (e) { setState({ loading: false, error: e.message || "연결 실패" }); }
+}
+
+loadData();
+</script>
+</body>
+</html>
