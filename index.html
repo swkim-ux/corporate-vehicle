@@ -3,65 +3,55 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>법인차량 관리 시스템</title>
+  <title>세종기술 스마트 차량관리 시스템</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #1a1a1a; }
-    #app { max-width: 480px; margin: 0 auto; background: #fff; min-height: 100vh; padding-bottom: 72px; }
-    .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: #fff; border-top: 1px solid #e5e5e5; display: flex; z-index: 500; padding-bottom: env(safe-area-inset-bottom, 0); }
-    .nav-btn { flex: 1; background: none; border: none; cursor: pointer; padding: 10px 0 8px; display: flex; flex-direction: column; align-items: center; gap: 3px; }
-    .nav-btn .icon { font-size: 18px; }
-    .nav-btn .label { font-size: 10px; color: #999; }
-    .nav-btn.active .label { color: #4A90E2; font-weight: 500; }
-    .sec-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 16px 10px; }
-    .sec-header h2 { font-size: 18px; font-weight: 500; }
-    .add-btn { border: none; border-radius: 20px; padding: 6px 16px; font-size: 13px; cursor: pointer; font-weight: 500; color: #fff; }
-    .content { padding: 0 16px; }
-    .card { background: #fff; border: 0.5px solid #e0e0e0; border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; }
-    .card-footer { display: flex; justify-content: flex-end; align-items: center; margin-top: 8px; padding-top: 8px; border-top: 0.5px solid #f0f0f0; gap: 8px; }
-    .del-btn { font-size: 12px; color: #999; background: none; border: none; cursor: pointer; padding: 2px 8px; }
-    .badge { border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 500; white-space: nowrap; }
-    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
-    .card-title { font-size: 14px; font-weight: 500; margin-bottom: 2px; }
-    .card-sub { font-size: 12px; color: #888; line-height: 1.6; }
-    .thumb { width: 68px; height: 50px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
-    .pdf-thumb { width: 68px; height: 50px; border-radius: 8px; background: #f5f5f5; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
-    .empty { text-align: center; padding: 3rem 1rem; color: #bbb; }
-    .empty .eicon { font-size: 40px; margin-bottom: 10px; }
-    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 999; display: flex; flex-direction: column; justify-content: flex-end; }
-    .sheet { background: #fff; border-radius: 20px 20px 0 0; max-height: 92vh; overflow-y: auto; padding-bottom: 24px; }
-    .sheet-handle { display: flex; justify-content: center; padding: 12px 0 4px; }
-    .handle-bar { width: 40px; height: 4px; border-radius: 2px; background: #ddd; }
-    .sheet-header { display: flex; justify-content: space-between; align-items: center; padding: 6px 20px 14px; }
-    .sheet-header h2 { font-size: 17px; font-weight: 500; }
-    .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #999; line-height: 1; }
-    .sheet-body { padding: 0 20px; }
-    .field { margin-bottom: 14px; }
-    .field label { font-size: 13px; color: #666; display: block; margin-bottom: 5px; }
-    .field input, .field select { width: 100%; font-size: 16px; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; background: #fff; }
-    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .photo-box { border: 1.5px dashed #ddd; border-radius: 10px; min-height: 80px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 6px; cursor: pointer; background: #fafafa; padding: 8px; }
-    .photo-box img { max-height: 110px; max-width: 100%; border-radius: 8px; object-fit: contain; }
-    .save-btn { width: 100%; padding: 14px; border-radius: 12px; color: #fff; border: none; cursor: pointer; font-size: 16px; font-weight: 500; margin-top: 4px; }
-    .ai-msg { font-size: 13px; padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; }
-    .ai-loading { color: #4A90E2; background: #e8f0fe; }
-    .ai-done { color: #27AE60; background: #e8f7f0; }
-    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 8px 16px; }
-    .stat-card { background: #f8f8f8; border-radius: 12px; padding: 14px; }
-    .stat-label { font-size: 12px; color: #888; margin-bottom: 6px; }
-    .stat-value { font-size: 20px; font-weight: 500; }
-    .veh-card { background: #fff; border: 0.5px solid #e0e0e0; border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; }
-    .veh-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
-    .spinner-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 1rem; gap: 12px; }
-    .spinner { width: 36px; height: 36px; border: 3px solid #eee; border-top: 3px solid #4A90E2; border-radius: 50%; animation: spin .8s linear infinite; }
-    .alert-banner { background: #FFF3CD; border: 1px solid #FFCA2C; border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; display: flex; gap: 10px; align-items: flex-start; }
-    .report-stat { background: #f8f8f8; border-radius: 12px; padding: 14px; }
-    .report-stat-label { font-size: 12px; color: #888; margin-bottom: 4px; }
-    .report-stat-value { font-size: 18px; font-weight: 500; }
-    .tab-seg { display: flex; gap: 6px; flex-wrap: wrap; }
-    .tab-seg button { padding: 6px 14px; border-radius: 20px; font-size: 13px; border: 1px solid #ddd; background: #fff; cursor: pointer; color: #666; }
-    .tab-seg button.active { background: #4A90E2; color: #fff; border-color: #4A90E2; font-weight: 500; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    /* ── 디자인 시스템 ── */
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; color: #1c1e21; line-height: 1.5; }
+    #app { max-width: 500px; margin: 0 auto; background: #fff; min-height: 100vh; position: relative; padding-bottom: 80px; box-shadow: 0 0 20px rgba(0,0,0,0.05); }
+    
+    /* 네비게이션 */
+    .nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 500px; background: #fff; display: flex; border-top: 1px solid #e5e5e5; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
+    .nav-item { flex: 1; border: none; background: none; padding: 12px 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #8d949e; transition: 0.2s; }
+    .nav-item.active { color: #1877f2; font-weight: bold; }
+    .nav-icon { font-size: 20px; }
+    .nav-label { font-size: 11px; }
+
+    /* 헤더 및 컨텐츠 */
+    .header { padding: 24px 20px 10px; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+    .content { padding: 0 20px; }
+    .sec-title { margin: 20px 0 12px; font-size: 16px; font-weight: 600; }
+
+    /* 카드 디자인 */
+    .card { background: #fff; border: 1px solid #ebedf0; border-radius: 16px; padding: 16px; margin-bottom: 12px; position: relative; }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; margin-bottom: 8px; }
+    
+    /* 버튼 */
+    .btn-add { background: #1877f2; color: #fff; border: none; padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-del { font-size: 12px; color: #bec3c9; border: none; background: none; cursor: pointer; float: right; }
+    .btn-save { width: 100%; padding: 16px; background: #1877f2; color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; margin-top: 10px; cursor: pointer; }
+    .btn-save:disabled { background: #e4e6eb; color: #bcc0c4; cursor: not-allowed; }
+
+    /* 입력 폼 (시트) */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2000; display: flex; align-items: flex-end; }
+    .sheet { width: 100%; max-width: 500px; background: #fff; border-radius: 24px 24px 0 0; padding: 24px; max-height: 90vh; overflow-y: auto; margin: 0 auto; animation: slideUp 0.3s ease-out; }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-size: 13px; font-weight: 600; color: #606770; margin-bottom: 6px; }
+    .field input, .field select { width: 100%; padding: 12px; border: 1px solid #dddfe2; border-radius: 10px; font-size: 16px; outline: none; background: #f5f6f7; }
+    .field input:focus { border-color: #1877f2; background: #fff; }
+    
+    .warning-box { background: #fff0f0; color: #ff4d4f; padding: 10px; border-radius: 8px; font-size: 12px; margin-bottom: 15px; font-weight: 500; display: none; }
+    .hint-text { font-size: 11px; color: #8d949e; margin-top: 4px; }
+
+    /* 테이블 */
+    table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; border-radius: 8px; overflow: hidden; }
+    th { background: #f0f2f5; padding: 10px; text-align: left; border: 1px solid #ddd; }
+    td { padding: 10px; border: 1px solid #ddd; }
+    
+    @media print { .nav, .btn-add, .btn-del { display: none !important; } }
   </style>
 </head>
 <body>
@@ -71,6 +61,7 @@
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, orderBy, query } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+// ── 환경 설정 ──
 const FB_CONFIG = {
   apiKey: "AIzaSyCPvMbFfXHUgkYfJ3ZRcp5ypATRo8xLOAo",
   authDomain: "corporate-vehicle.firebaseapp.com",
@@ -79,127 +70,85 @@ const FB_CONFIG = {
   messagingSenderId: "419510195247",
   appId: "1:419510195247:web:602f11bb4696102b1ca2da"
 };
-const GEMINI_KEY = "AIzaSyAhYeWAWNx5r-EljO466VjN6tvVaYllLig";
+
 const fbApp = getApps().length ? getApps()[0] : initializeApp(FB_CONFIG);
 const db = getFirestore(fbApp);
 
-// ── FS Helpers ──────────────────────────────────────────
+// ── 데이터베이스 연동 ──
 async function fsGet(col) {
   const q = query(collection(db, col), orderBy("createdAt", "desc"));
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
-async function fsAdd(col, data) {
-  const ref = await addDoc(collection(db, col), { ...data, createdAt: Date.now() });
-  return ref.id;
-}
-async function fsDel(col, id) { await deleteDoc(doc(db, col, id)); }
+async function fsAdd(col, data) { return await addDoc(collection(db, col), { ...data, createdAt: Date.now() }); }
 async function fsUpdate(col, id, data) { await updateDoc(doc(db, col, id), data); }
+async function fsDel(col, id) { await deleteDoc(doc(db, col, id)); }
 
-async function callAI(parts) {
-  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`, {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ contents: [{ parts }] })
-  });
-  const d = await r.json();
-  return d.candidates?.[0]?.content?.parts?.[0]?.text || "";
+// ── 유틸리티 ──
+const nowLocal = () => {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+};
+const num = n => Number(n).toLocaleString();
+
+// ── 앱 상태 ──
+let S = { tab: "home", sheet: null, sheetId: null, vehicles: [], drives: [], loading: true, lastOdo: 0 };
+function set(patch) { S = { ...S, ...patch }; render(); }
+
+// ── 핵심 로직 함수 ──
+function getActiveDrive(vid) {
+  return S.drives.find(d => d.vehicleId === vid && !d.arriveTime);
 }
 
-// ── Utils ─────────────────────────────────────────────
-const toB64 = f => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result.split(",")[1]); r.onerror = rej; r.readAsDataURL(f); });
-const toDataURL = f => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
-const today = () => new Date().toISOString().slice(0, 10);
-const firstDay = () => { const d = new Date(); d.setDate(1); return d.toISOString().slice(0, 10); };
-const nowLocal = () => {
-  const now = new Date();
-  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-  return now.toISOString().slice(0, 16);
-};
-const numFmt = n => Number(n).toLocaleString();
-const dtFmt = s => s ? s.replace("T", " ").slice(0, 16) : "";
-const C = { drive: "#4A90E2", maint: "#F5A623", fuel: "#E74C3C", veh: "#27AE60" };
+function getPrevOdometer(vid) {
+  const finished = S.drives.filter(d => d.vehicleId === vid && d.arriveOdo).sort((a,b) => b.createdAt - a.createdAt);
+  return finished.length > 0 ? Number(finished[0].arriveOdo) : 0;
+}
 
-// ── State ──────────────────────────────────────────────
-let S = { tab: "home", sheet: null, sheetId: null, vehicles: [], drives: [], maints: [], fuels: [], loading: true, error: null, rVid: "all", rFrom: firstDay(), rTo: today(), rTab: "drive" };
-let photoDataURL = null;
-const veh = id => S.vehicles.find(v => v.id === id);
-const set = patch => { S = { ...S, ...patch }; render(); };
-
-// ── Render Logic ────────────────────────────────────────
+// ── 렌더링 ──
 function render() {
   const app = document.getElementById("app");
-  if (S.loading) { app.innerHTML = `<div class="spinner-wrap"><div class="spinner"></div><div style="font-size:13px;color:#888">불러오는 중...</div></div>`; return; }
-  if (S.error) { app.innerHTML = `<div style="padding:2rem;text-align:center">⚠️ 연결 실패: ${S.error}</div>`; return; }
+  if (S.loading) { app.innerHTML = `<div style="padding:100px; text-align:center; color:#888;">데이터를 불러오는 중...</div>`; return; }
 
-  let html = "";
-  if (S.tab === "home") html = renderHome();
-  else if (S.tab === "drive") html = renderDrives();
-  else if (S.tab === "maint") html = renderMaints();
-  else if (S.tab === "fuel") html = renderFuels();
-  else if (S.tab === "report") html = renderReport();
-  else if (S.tab === "veh") html = renderVehs();
+  let bodyHtml = "";
+  if (S.tab === "home") bodyHtml = renderHome();
+  else if (S.tab === "drive") bodyHtml = renderDrives();
+  else if (S.tab === "report") bodyHtml = renderReport();
+  else if (S.tab === "veh") bodyHtml = renderVehs();
 
-  const navHtml = `<nav class="bottom-nav">${[
-    { id:"home", icon:"🏠", label:"홈" },
-    { id:"drive", icon:"🚗", label:"주행" },
-    { id:"maint", icon:"🔧", label:"정비" },
-    { id:"fuel", icon:"⛽", label:"주유" },
-    { id:"report", icon:"📊", label:"리포트" },
-    { id:"veh", icon:"📋", label:"차량" },
-  ].map(t => `<button class="nav-btn${S.tab===t.id?" active":""}" data-tab="${t.id}"><span class="icon">${t.icon}</span><span class="label">${t.label}</span></button>`).join("")}</nav>`;
+  const navHtml = `
+    <nav class="nav">
+      <button class="nav-item ${S.tab==='home'?'active':''}" onclick="changeTab('home')"><span class="nav-icon">🏠</span><span class="nav-label">홈</span></button>
+      <button class="nav-item ${S.tab==='drive'?'active':''}" onclick="changeTab('drive')"><span class="nav-icon">🚗</span><span class="nav-label">주행</span></button>
+      <button class="nav-item ${S.tab==='report'?'active':''}" onclick="changeTab('report')"><span class="nav-icon">📊</span><span class="nav-label">기록</span></button>
+      <button class="nav-item ${S.tab==='veh'?'active':''}" onclick="changeTab('veh')"><span class="nav-icon">📋</span><span class="nav-label">차량</span></button>
+    </nav>`;
 
-  let sheetHtml = "";
-  if (S.sheet) {
-    const titles = { drive:"출발 등록", arrive:"복귀 입력", maint:"정비 기록 추가", fuel:"주유 기록 추가", veh:"차량 등록" };
-    sheetHtml = `<div class="overlay" id="overlay">
-      <div class="sheet">
-        <div class="sheet-handle"><div class="handle-bar"></div></div>
-        <div class="sheet-header"><h2>${titles[S.sheet]}</h2><button class="close-btn" id="closeSheet">×</button></div>
-        <div class="sheet-body">${buildSheetBody()}</div>
-      </div>
-    </div>`;
-  }
-  app.innerHTML = `<div>${html}</div>${navHtml}${sheetHtml}`;
-  bindEvents();
-}
+  const sheetHtml = S.sheet ? `
+    <div class="overlay" onclick="if(event.target===this)set({sheet:null})">
+      <div class="sheet">${renderSheetBody()}</div>
+    </div>` : "";
 
-// [각 섹션 렌더링 함수들]
-function renderOilAlerts() {
-  const alerts = [];
-  for (const v of S.vehicles) {
-    const oilRecs = S.maints.filter(m => m.vehicleId === v.id && m.type && m.type.includes("엔진오일")).sort((a,b) => new Date(b.date)-new Date(a.date));
-    if (!oilRecs.length) continue;
-    const last = oilRecs[0];
-    const monthsDiff = (new Date().getFullYear()-new Date(last.date).getFullYear())*12+(new Date().getMonth()-new Date(last.date).getMonth());
-    const latestDrive = S.drives.filter(d => d.vehicleId===v.id && d.odometer).sort((a,b)=>b.createdAt-a.createdAt)[0];
-    const kmSince = last.odometer && latestDrive?.odometer ? Number(latestDrive.odometer)-Number(last.odometer) : null;
-    if (monthsDiff < 6 && (kmSince === null || kmSince < 10000)) continue;
-    alerts.push({ name: v.name, plate: v.plate, reason: monthsDiff >= 6 ? `${monthsDiff}개월 경과` : `${numFmt(kmSince)}km 주행`, date: last.date });
-  }
-  return alerts.map(a => `<div class="alert-banner">🔔 ${a.name}(${a.plate}): 엔진오일 교체 시기 (${a.reason})</div>`).join("");
+  app.innerHTML = bodyHtml + navHtml + sheetHtml;
 }
 
 function renderHome() {
-  const totalMaint = S.maints.reduce((s,m)=>s+(Number(m.cost)||0),0);
-  const totalFuel = S.fuels.reduce((s,f)=>s+(Number(f.amount)||0),0);
+  const drivingCount = S.drives.filter(d => !d.arriveTime).length;
   return `
-    <div style="padding:20px 16px 8px">
-      <h1 style="font-size:20px;font-weight:500">법인차량 관리</h1>
-      <div style="font-size:13px;color:#888;margin-top:2px">${new Date().toLocaleDateString("ko-KR")}</div>
-    </div>
-    ${renderOilAlerts()}
-    <div class="stat-grid">
-      <div class="stat-card"><div class="stat-label">등록 차량</div><div class="stat-value" style="color:${C.veh}">${S.vehicles.length}대</div></div>
-      <div class="stat-card"><div class="stat-label">정비 비용</div><div class="stat-value" style="color:${C.maint}">${numFmt(totalMaint)}원</div></div>
-    </div>
-    <div style="padding:16px">
-      <div style="font-size:15px;font-weight:500;margin-bottom:10px">차량 현황</div>
+    <div class="header"><h1>차량관리 시스템</h1></div>
+    <div class="content">
+      <div class="card" style="background: #1877f2; color: #fff; border:none;">
+        <div style="font-size:14px; opacity:0.9">반갑습니다, 김시원 대리님</div>
+        <div style="font-size:22px; font-weight:800; margin-top:5px">현재 ${drivingCount}대 운행 중</div>
+      </div>
+      <div class="sec-title">품질부 차량 현황</div>
       ${S.vehicles.map(v => {
-        const out = S.drives.find(d => d.vehicleId === v.id && !d.arriveTime);
-        return `<div class="veh-card">
-          <div class="veh-icon" style="background:${v.color||C.drive}22">🚗</div>
-          <div style="flex:1"><strong>${v.name}</strong><br><small>${v.plate}</small></div>
-          <div style="color:${out?'#E74C3C':'#27AE60'}">${out?'🔴 운행중':'🟢 대기중'}</div>
+        const out = getActiveDrive(v.id);
+        return `<div class="card">
+          <div class="badge" style="background:${out?'#fff0f0':'#e7f3ff'}; color:${out?'#ff4d4f':'#1877f2'}">${out?'운행중':'대기중'}</div>
+          <div style="font-weight:600; font-size:16px;">${v.name} (${v.plate})</div>
+          <div style="font-size:13px; color:#606770; margin-top:4px">${out ? `${out.driver}대리 (${out.to} 이동 중)` : '본사 주차장 위치'}</div>
         </div>`;
       }).join("")}
     </div>`;
@@ -207,175 +156,171 @@ function renderHome() {
 
 function renderDrives() {
   return `
-    <div class="sec-header"><h2>주행 기록</h2><button class="add-btn" style="background:${C.drive}" data-sheet="drive">+ 출발</button></div>
+    <div class="header"><h1>주행 목록</h1><button class="btn-add" onclick="set({sheet:'drive'})">+ 출발 등록</button></div>
     <div class="content">
-      ${S.drives.map(d => `
-        <div class="card">
-          <div style="display:flex;gap:10px">
-            ${d.photo ? `<img src="${d.photo}" class="thumb">` : ""}
-            <div style="flex:1">
-              <div class="row"><span class="badge" style="background:${C.drive}22;color:${C.drive}">${veh(d.vehicleId)?.name}</span></div>
-              <div class="card-title">${d.from} → ${d.to}</div>
-              <div class="card-sub">${d.driver} | ${dtFmt(d.departTime)} ~ ${dtFmt(d.arriveTime)}</div>
-            </div>
-          </div>
-          <div class="card-footer">
-            ${!d.arriveTime ? `<button data-arrive="${d.id}" style="background:${C.drive};color:#fff;border:none;padding:4px 10px;border-radius:6px">복귀 입력</button>` : ""}
-            <button class="del-btn" data-del="drives" data-id="${d.id}">삭제</button>
-          </div>
-        </div>`).join("")}
-    </div>`;
-}
-
-function renderMaints() {
-  return `
-    <div class="sec-header"><h2>정비 기록</h2><button class="add-btn" style="background:${C.maint}" data-sheet="maint">+ 추가</button></div>
-    <div class="content">
-      ${S.maints.map(m => `<div class="card">
-        <div class="row"><span class="badge" style="background:${C.maint}22;color:${C.maint}">${veh(m.vehicleId)?.name}</span> <small>${m.date}</small></div>
-        <div class="card-title">${m.type}</div>
-        <div class="card-sub">${m.shop} | ${numFmt(m.cost)}원</div>
-        <button class="del-btn" data-del="maints" data-id="${m.id}">삭제</button>
-      </div>`).join("")}
-    </div>`;
-}
-
-function renderFuels() {
-  return `
-    <div class="sec-header"><h2>주유 기록</h2><button class="add-btn" style="background:${C.fuel}" data-sheet="fuel">+ 추가</button></div>
-    <div class="content">
-      ${S.fuels.map(f => `<div class="card">
-        <div class="row"><span class="badge" style="background:${C.fuel}22;color:${C.fuel}">${veh(f.vehicleId)?.name}</span> <small>${f.date}</small></div>
-        <div class="card-title">${f.station}</div>
-        <div class="card-sub">${f.liters}L | ${numFmt(f.amount)}원</div>
-        <button class="del-btn" data-del="fuels" data-id="${f.id}">삭제</button>
-      </div>`).join("")}
+      ${S.drives.map(d => {
+        const v = S.vehicles.find(v => v.id === d.vehicleId);
+        return `<div class="card">
+          <button class="btn-del" onclick="deleteData('drives','${d.id}')">삭제</button>
+          <div class="badge" style="background:#f0f2f5">${v?.name || '차량'}</div>
+          <div style="font-weight:600;">${d.from} → ${d.to}</div>
+          <div style="font-size:12px; color:#8d949e; margin-top:4px">${d.driver} | ${d.departTime.replace('T',' ')}</div>
+          ${!d.arriveTime ? `<button class="btn-save" style="padding:10px; font-size:13px;" onclick="set({sheet:'arrive', sheetId:'${d.id}'})">복귀 입력</button>` : `<div style="margin-top:8px; font-size:12px; color:#1877f2; font-weight:600;">✅ 복귀완료 (${num(d.arriveOdo)}km)</div>`}
+        </div>`;
+      }).join("")}
     </div>`;
 }
 
 function renderReport() {
-  const { rVid, rFrom, rTo, rTab } = S;
-  const inRange = date => date && date >= rFrom && date <= rTo;
-  const byVeh = arr => rVid === "all" ? arr : arr.filter(x => x.vehicleId === rVid);
-  const fd = byVeh(S.drives).filter(d => inRange(d.date || d.departTime?.slice(0,10)));
-  
-  return `
-    <div class="sec-header"><h2>리포트</h2><button id="printBtn" style="background:#555;color:#fff;border:none;padding:5px 12px;border-radius:6px">🖨️ 인쇄</button></div>
-    <div style="padding:0 16px">
-      <select id="r_vid" style="width:100%;padding:8px;margin-bottom:10px">
-        <option value="all">전체 차량</option>
-        ${S.vehicles.map(v => `<option value="${v.id}" ${rVid===v.id?'selected':''}>${v.name}</option>`).join("")}
-      </select>
-      <div class="grid2">
-        <input type="date" id="r_from" value="${rFrom}">
-        <input type="date" id="r_to" value="${rTo}">
-      </div>
-      <div class="tab-seg" style="margin-top:10px">
-        <button class="${rTab==='drive'?'active':''}" data-rtab="drive">주행</button>
-        <button class="${rTab==='maint'?'active':''}" data-rtab="maint">정비</button>
-        <button class="${rTab==='fuel'?'active':''}" data-rtab="fuel">주유</button>
-      </div>
-    </div>
-    <div class="content" style="margin-top:16px">
-      ${fd.length===0 ? '<div class="empty">데이터가 없습니다.</div>' : fd.map(d=>`<div class="card">${d.from}→${d.to} (${d.driver})</div>`).join("")}
-    </div>`;
+  return `<div class="header"><h1>운행 기록부</h1><button class="btn-add" style="background:#42b72a" onclick="window.print()">인쇄하기</button></div>
+          <div class="content">
+            <table>
+              <thead><tr><th>차량</th><th>운전자</th><th>구간</th><th>출발Odo</th><th>복귀Odo</th></tr></thead>
+              <tbody>
+                ${S.drives.map(d => `<tr>
+                  <td>${S.vehicles.find(v=>v.id===d.vehicleId)?.name || '-'}</td>
+                  <td>${d.driver}</td>
+                  <td>${d.from}~${d.to}</td>
+                  <td>${d.departOdo}${d.odoMismatch?'⚠️':''}</td>
+                  <td>${d.arriveOdo || '-'}</td>
+                </tr>`).join("")}
+              </tbody>
+            </table>
+            <p style="font-size:10px; color:#888; margin-top:10px;">* ⚠️ 표시는 이전 기록과 다르게 수동 수정된 주행거리입니다.</p>
+          </div>`;
 }
 
 function renderVehs() {
-  return `
-    <div class="sec-header"><h2>차량 관리</h2><button class="add-btn" style="background:${C.veh}" data-sheet="veh">+ 추가</button></div>
-    <div class="content">
-      ${S.vehicles.map(v => `<div class="veh-card">
-        <div class="veh-icon" style="background:${v.color||C.veh}22">🚗</div>
-        <div style="flex:1"><strong>${v.name}</strong><br><small>${v.plate}</small></div>
-        <button class="del-btn" data-del="vehicles" data-id="${v.id}">삭제</button>
-      </div>`).join("")}
-    </div>`;
+  return `<div class="header"><h1>차량 관리</h1><button class="btn-add" onclick="set({sheet:'veh'})">+ 차량 등록</button></div>
+          <div class="content">
+            ${S.vehicles.map(v => `<div class="card"><button class="btn-del" onclick="deleteData('vehicles','${v.id}')">삭제</button><b>${v.name}</b><br><small>${v.plate}</small></div>`).join("")}
+          </div>`;
 }
 
-// ── Sheet Body ──────────────────────────────────────────
-function buildSheetBody() {
-  const vOpts = S.vehicles.map(v => `<option value="${v.id}">${v.name}</option>`).join("");
-  if (S.sheet === "drive") return `
-    <div class="field"><label>차량</label><select id="f_vid">${vOpts}</select></div>
-    <div class="field"><label>운전자</label><input id="f_driver" placeholder="홍길동"></div>
-    <div class="grid2"><input id="f_from" placeholder="출발지" value="본사"><input id="f_to" placeholder="목적지"></div>
-    <div class="field"><label>출발 일시</label><input type="datetime-local" id="f_depart" value="${nowLocal()}"></div>
-    <button class="save-btn" id="saveBtn" style="background:${C.drive}">출발 등록</button>`;
+function renderSheetBody() {
+  if (S.sheet === 'drive') {
+    return `
+      <h2 style="margin-bottom:15px">출발 등록</h2>
+      <div id="drive_warn" class="warning-box"></div>
+      <div class="field"><label>차량 선택</label>
+        <select id="f_vid" onchange="onSelectVehicle(this.value)">
+          <option value="">차량을 선택하세요</option>
+          ${S.vehicles.map(v => `<option value="${v.id}">${v.name} (${v.plate})</option>`).join("")}
+        </select>
+      </div>
+      <div class="field"><label>운전자</label><input id="f_driver" value="김시원"></div>
+      <div class="field"><label>출발 시 주행거리(km)</label>
+        <input type="number" id="f_depart_odo">
+        <div id="odo_hint" class="hint-text">차량을 선택하면 이전 거리가 표시됩니다.</div>
+      </div>
+      <div class="grid2" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div class="field"><label>출발지</label><input id="f_from" value="본사"></div>
+        <div class="field"><label>목적지</label><input id="f_to"></div>
+      </div>
+      <div class="field"><label>출발 시간</label><input type="datetime-local" id="f_time" value="${nowLocal()}"></div>
+      <button class="btn-save" id="btn_drive_submit" onclick="saveDrive()">출발 등록 완료</button>`;
+  }
   
-  if (S.sheet === "arrive") return `
-    <div class="field"><label>도착 일시</label><input type="datetime-local" id="f_arrive" value="${nowLocal()}"></div>
-    <div class="field"><label>총 주행거리(km)</label><input type="number" id="f_odometer" placeholder="계기판 숫자"></div>
-    <div class="photo-box" id="photoBox">📷 사진 업로드 (AI 인식)</div>
-    <input type="file" id="photoInput" accept="image/*" style="display:none">
-    <div id="aiMsg"></div>
-    <button class="save-btn" id="saveBtn" style="background:${C.drive}">복귀 완료</button>`;
-  
-  if (S.sheet === "veh") return `
-    <input id="f_name" placeholder="차량명(쏘렌토 등)" class="field">
-    <input id="f_plate" placeholder="번호판(12가 3456)" class="field">
-    <button class="save-btn" id="saveBtn" style="background:${C.veh}">등록</button>`;
-  
-  return "";
-}
-
-// ── Events & Handlers ─────────────────────────────────────
-function bindEvents() {
-  document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => set({ tab: b.dataset.tab, sheet: null }));
-  document.querySelectorAll("[data-sheet]").forEach(b => b.onclick = () => set({ sheet: b.dataset.sheet, sheetId: null }));
-  document.querySelectorAll("[data-arrive]").forEach(b => b.onclick = () => set({ sheet: "arrive", sheetId: b.dataset.arrive }));
-  
-  const closeSheet = document.getElementById("closeSheet");
-  if (closeSheet) closeSheet.onclick = () => set({ sheet: null });
-
-  const photoBox = document.getElementById("photoBox");
-  const photoInput = document.getElementById("photoInput");
-  if (photoBox && photoInput) {
-    photoBox.onclick = () => photoInput.click();
-    photoInput.onchange = async e => {
-      const file = e.target.files[0]; if (!file) return;
-      photoDataURL = await toDataURL(file);
-      photoBox.innerHTML = `<img src="${photoDataURL}" style="max-height:100px">`;
-      // AI 호출 로직 생략(필요시 callAI 연동)
-    };
+  if (S.sheet === 'arrive') {
+    return `
+      <h2 style="margin-bottom:15px">복귀 등록</h2>
+      <div class="field"><label>복귀 시간</label><input type="datetime-local" id="f_arrive_time" value="${nowLocal()}"></div>
+      <div class="field"><label>현재 주행거리(km)</label><input type="number" id="f_arrive_odo" placeholder="계기판 숫자를 입력하세요"></div>
+      <button class="btn-save" onclick="saveArrive()">복귀 완료</button>`;
   }
 
-  const saveBtn = document.getElementById("saveBtn");
-  if (saveBtn) saveBtn.onclick = handleSave;
+  if (S.sheet === 'veh') {
+    return `
+      <h2 style="margin-bottom:15px">새 차량 등록</h2>
+      <div class="field"><label>차량명</label><input id="f_vname" placeholder="예: 쏘렌토"></div>
+      <div class="field"><label>번호판</label><input id="f_vplate" placeholder="예: 123가 4567"></div>
+      <button class="btn-save" onclick="saveVeh()">차량 추가</button>`;
+  }
+}
 
-  document.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
-    if (confirm("삭제하시겠습니까?")) {
-      await fsDel(b.dataset.del, b.dataset.id);
-      loadData();
-    }
+// ── 브라우저 이벤트용 함수 ──
+window.changeTab = (t) => set({ tab: t });
+
+window.onSelectVehicle = (vid) => {
+  const warn = document.getElementById('drive_warn');
+  const btn = document.getElementById('btn_drive_submit');
+  const odoInput = document.getElementById('f_depart_odo');
+  const odoHint = document.getElementById('odo_hint');
+
+  // 1. 재출발 차단 로직
+  const active = getActiveDrive(vid);
+  if (active) {
+    warn.innerText = "⚠️ 해당 차량은 아직 복귀하지 않았습니다. 복귀 처리를 먼저 해주세요.";
+    warn.style.display = "block";
+    btn.disabled = true;
+  } else {
+    warn.style.display = "none";
+    btn.disabled = false;
+  }
+
+  // 2. 이전 거리 자동 입력 로직
+  const lastKm = getPrevOdometer(vid);
+  odoInput.value = lastKm;
+  odoHint.innerText = `최근 기록된 거리: ${num(lastKm)}km`;
+  S.lastOdo = lastKm; // 비교용 임시저장
+};
+
+window.saveDrive = async () => {
+  const vid = document.getElementById('f_vid').value;
+  const currentOdo = Number(document.getElementById('f_depart_odo').value);
+  if (!vid) return alert("차량을 선택하세요.");
+
+  await fsAdd("drives", {
+    vehicleId: vid,
+    driver: document.getElementById('f_driver').value,
+    departOdo: currentOdo,
+    odoMismatch: currentOdo !== S.lastOdo, // 이전 기록과 다르면 경고 플래그
+    from: document.getElementById('f_from').value,
+    to: document.getElementById('f_to').value,
+    departTime: document.getElementById('f_time').value,
+    arriveTime: ""
   });
-}
+  set({ sheet: null });
+  loadData();
+};
 
-const gv = id => document.getElementById(id)?.value || "";
+window.saveArrive = async () => {
+  const odo = document.getElementById('f_arrive_odo').value;
+  const time = document.getElementById('f_arrive_time').value;
+  if (!odo) return alert("주행거리를 입력하세요.");
+  await fsUpdate("drives", S.sheetId, { arriveTime: time, arriveOdo: Number(odo) });
+  set({ sheet: null });
+  loadData();
+};
 
-async function handleSave() {
-  const s = S.sheet;
-  try {
-    if (s === "drive") {
-      await fsAdd("drives", { vehicleId: gv("f_vid"), driver: gv("f_driver"), from: gv("f_from"), to: gv("f_to"), departTime: gv("f_depart"), date: today(), arriveTime: "" });
-    } else if (s === "arrive") {
-      await fsUpdate("drives", S.sheetId, { arriveTime: gv("f_arrive"), odometer: gv("f_odometer"), photo: photoDataURL });
-    } else if (s === "veh") {
-      await fsAdd("vehicles", { name: gv("f_name"), plate: gv("f_plate"), createdAt: Date.now() });
-    }
-    set({ sheet: null });
+window.saveVeh = async () => {
+  const name = document.getElementById('f_vname').value;
+  const plate = document.getElementById('f_vplate').value;
+  if (!name || !plate) return alert("내용을 입력하세요.");
+  await fsAdd("vehicles", { name, plate });
+  set({ sheet: null });
+  loadData();
+};
+
+window.deleteData = async (col, id) => {
+  if (confirm("정말 삭제하시겠습니까?")) {
+    await fsDel(col, id);
     loadData();
-  } catch (e) { alert("저장 실패!"); }
-}
+  }
+};
 
 async function loadData() {
   set({ loading: true });
   try {
-    const [v, d, m, f] = await Promise.all([fsGet("vehicles"), fsGet("drives"), fsGet("maints"), fsGet("fuels")]);
-    set({ vehicles: v, drives: d, maints: m, fuels: f, loading: false });
-  } catch (e) { set({ error: e.message, loading: false }); }
+    const [v, d] = await Promise.all([fsGet("vehicles"), fsGet("drives")]);
+    set({ vehicles: v, drives: d, loading: false });
+  } catch (e) {
+    alert("데이터 로드 실패!");
+    set({ loading: false });
+  }
 }
 
+// 초기 실행
 loadData();
 </script>
 </body>
