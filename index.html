@@ -103,7 +103,7 @@ const set=p=>{S={...S,...p};render();};
 function render(){
   const app=document.getElementById("app");
   if(S.loading){app.innerHTML=`<div class="spw"><div class="sp"></div><div style="font-size:13px;color:#888">불러오는 중...</div></div>`;return;}
-  if(S.error){app.innerHTML=`<div style="padding:2rem;text-align:center"><div style="font-size:36px;margin-bottom:12px">⚠️</div><div style="font-size:15px;font-weight:500;margin-bottom:8px">Firebase 연결 실패</div><div style="font-size:13px;color:#888;margin-bottom:16px">${S.error}</div><button onclick="window.loadData()" style="padding:10px 24px;border-radius:10px;background:#4A90E2;color:#fff;border:none;cursor:pointer">다시 시도</button></div>`;return;}
+  if(S.error){app.innerHTML=`<div style="padding:2rem;text-align:center"><div style="font-size:36px;margin-bottom:12px">⚠️</div><div style="font-size:15px;font-weight:500;margin-bottom:8px">Firebase 연결 실패</div><div style="font-size:13px;color:#888;margin-bottom:16px">${S.error}</div><button id="retryBtn" style="padding:10px 24px;border-radius:10px;background:#4A90E2;color:#fff;border:none;cursor:pointer">다시 시도</button></div>`;document.getElementById("retryBtn").onclick=loadData;return;}
   const TABS=[{id:"home",ic:"🏠",lb:"홈"},{id:"drive",ic:"🚗",lb:"주행"},{id:"maint",ic:"🔧",lb:"정비"},{id:"fuel",ic:"⛽",lb:"주유"},{id:"report",ic:"📊",lb:"리포트"},{id:"veh",ic:"📋",lb:"차량"}];
   let html="";
   if(S.tab==="home")html=rHome();
@@ -112,7 +112,7 @@ function render(){
   else if(S.tab==="fuel")html=rFuels();
   else if(S.tab==="report")html=rReport();
   else if(S.tab==="veh")html=rVehs();
-  const nav=`<nav class="bnav">${TABS.map(t=>`<button class="nb${S.tab===t.id?" on":""}" data-tab="${t.id}"><span class="ic">${t.ic}</span><span class="lb">${t.lb}</span></button>`).join("")}</nav>`;
+      const nav=`<nav class="bnav">${TABS.map(t=>`<button class="nb${S.tab===t.id?" on":""}" data-tab="${t.id}"><span class="ic">${t.ic}</span><span class="lb">${t.lb}</span></button>`).join("")}<button class="nb" id="refreshBtn"><span class="ic">🔄</span><span class="lb">새로고침</span></button></nav>`;
   const titles={drive:"출발 등록",arrive:"복귀 입력",maint:"정비 기록 추가",fuel:"주유 기록 추가",veh:"차량 등록"};
   const sheet=S.sheet?`<div class="ov" id="ov"><div class="sl"><div class="slh"><div class="hb"></div></div><div class="slhd"><h2>${titles[S.sheet]}</h2><button class="xb" id="xb">×</button></div><div class="slb">${bSheet()}</div></div></div>`:"";
   app.innerHTML=`<div>${html}</div>${nav}${sheet}`;
@@ -259,6 +259,7 @@ function bSheet(){
     <div id="aim" style="display:none"></div>
     <div class="fld"><label>정비 항목 *</label><input id="f_type" placeholder="엔진오일 교환"/></div>
     <div class="g2"><div class="fld"><label>정비소</label><input id="f_shop" placeholder="○○ 자동차"/></div><div class="fld"><label>비용 (원)</label><input type="number" id="f_cost" placeholder="50000"/></div></div>
+    <div class="fld"><label>정비 시 총주행거리 (km)</label><input type="number" id="f_maint_odo" placeholder="45231"/></div>
     <div class="fld"><label>메모</label><input id="f_note" placeholder="추가 메모"/></div>
     <button class="svb" id="svb" style="background:${C.maint}">정비 기록 저장</button>`;
   if(s==="fuel")return`
@@ -277,6 +278,7 @@ function bSheet(){
 // ── Events ───────────────────────────────────────────────
 function bind(){
   document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>set({tab:b.dataset.tab,sheet:null}));
+  const rb=document.getElementById("refreshBtn");if(rb)rb.onclick=loadData;
   document.querySelectorAll("[data-sheet]").forEach(b=>b.onclick=()=>{PDU=null;set({sheet:b.dataset.sheet,sheetId:null});});
   document.querySelectorAll("[data-arrive]").forEach(b=>b.onclick=()=>{PDU=null;set({sheet:"arrive",sheetId:b.dataset.arrive});});
   document.querySelectorAll("[data-del]").forEach(b=>b.onclick=async()=>{
@@ -352,7 +354,7 @@ async function doSave(){
     await fsUpd("drives",S.sheetId,{arriveTime:at,odometer:odo,photo:PDU});
     set({drives:S.drives.map(d=>d.id===S.sheetId?{...d,arriveTime:at,odometer:odo,photo:PDU}:d),sheet:null});
   }else if(s==="maint"){
-    const data={vehicleId:gv("f_vid"),date:gv("f_date"),type:gv("f_type"),shop:gv("f_shop"),cost:gv("f_cost"),note:gv("f_note"),photo:PDU};
+    const data={vehicleId:gv("f_vid"),date:gv("f_date"),type:gv("f_type"),shop:gv("f_shop"),cost:gv("f_cost"),odometer:gv("f_maint_odo"),note:gv("f_note"),photo:PDU};
     if(!data.vehicleId||!data.date||!data.type)return alert("필수 항목(*)을 모두 입력해주세요.");
     const id=await fsAdd("maints",data);
     set({maints:[{id,...data,createdAt:Date.now()},...S.maints],sheet:null});
@@ -398,7 +400,7 @@ function doPrint(){
 }
 
 // ── Load ─────────────────────────────────────────────────
-window.loadData=async function(){
+async function loadData(){
   set({loading:true,error:null});
   try{const[v,d,m,f]=await Promise.all([fsGet("vehicles"),fsGet("drives"),fsGet("maints"),fsGet("fuels")]);set({vehicles:v,drives:d,maints:m,fuels:f,loading:false});}
   catch(e){set({loading:false,error:e.message||"연결 실패"});}
