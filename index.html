@@ -442,7 +442,7 @@ function buildSheetBody() {
       <div style="margin-top:2px">출발: ${dtFmt(d?.departTime)||"-"}</div>
       ${d?.odoStart?`<div style="margin-top:2px">출발 총주행: ${numFmt(d.odoStart)}km</div>`:""}
     </div>
-    <div class="field"><label>도착 일시 *</label><input type="datetime-local" id="f_arrive" /></div>
+    <div class="field"><label>도착 일시 *</label><input type="datetime-local" id="f_arrive" value="${nowLocal()}" /></div>
     <div class="field"><label>도착 시 총주행거리 (km)</label><input type="number" id="f_odometer" placeholder="45231" /></div>
     <div class="field"><label>계기판 사진 (AI 자동 인식)</label>
       <div class="photo-box" id="photoBox"><div style="font-size:28px">📷</div><div style="font-size:12px;color:#aaa">탭하여 업로드</div></div>
@@ -566,15 +566,40 @@ async function handleSave(){
   const s=S.sheet;
   if(s==="drive"){
     const vid=gv("f_vid");
+    const departTime=gv("f_depart");
+    if(!vid||!gv("f_driver")||!departTime||!gv("f_from")||!gv("f_to")) return alert("필수 항목(*)을 모두 입력해주세요.");
+    // ① 운행 중 차단
+    const inUse=S.drives.find(d=>d.vehicleId===vid&&!d.arriveTime);
+    if(inUse) return alert(`이 차량은 현재 운행 중입니다.\n(${inUse.driver} · ${inUse.from}→${inUse.to})\n복귀 입력 후 출발 등록해주세요.`);
+    // ② 시간 중복 체크
+    const newDepart=new Date(departTime);
+    const overlap=S.drives.find(d=>{
+      if(d.vehicleId!==vid||!d.arriveTime) return false;
+      const s=new Date(d.departTime),e=new Date(d.arriveTime);
+      return newDepart>=s&&newDepart<=e;
+    });
+    if(overlap) return alert(`출발 시간이 기존 주행 기록과 겹칩니다.\n(${dtFmt(overlap.departTime)} ~ ${dtFmt(overlap.arriveTime)})\n시간을 다시 확인해주세요.`);
+    // ③ 이전 주행거리
     const lastDrive=S.drives.find(d=>d.vehicleId===vid&&d.odometer);
-    const odoStart=lastDrive?lastDrive.odometer:"";
-    const data={vehicleId:vid,driver:gv("f_driver"),date:today(),departTime:gv("f_depart"),arriveTime:"",from:gv("f_from"),to:gv("f_to"),purpose:gv("f_purpose"),odoStart,odometer:"",photo:null};
-    if(!data.vehicleId||!data.driver||!data.departTime||!data.from||!data.to) return alert("필수 항목(*)을 모두 입력해주세요.");
+    const odoStartAuto=lastDrive?lastDrive.odometer:"";
+    const odoStartInput=gv("f_odo_start");
+    const odoStart=odoStartInput||odoStartAuto;
+    const odoStartModified=odoStartAuto&&odoStartInput&&odoStartInput!==odoStartAuto?"Y":"N";
+    const data={vehicleId:vid,driver:gv("f_driver"),date:today(),departTime,arriveTime:"",from:gv("f_from"),to:gv("f_to"),purpose:gv("f_purpose"),odoStart,odoStartModified,odometer:"",photo:null};
     const id=await fsAdd("drives",data);
     set({drives:[{id,...data,createdAt:Date.now()},...S.drives],sheet:null});
-  }else if(s==="arrive"){
+  if(s==="arrive"){
     const arriveTime=gv("f_arrive"),odometer=gv("f_odometer");
     if(!arriveTime) return alert("도착 일시를 입력해주세요.");
+    const d=S.drives.find(d=>d.id===S.sheetId);
+    // ④ 도착 시간 중복 체크
+    if(d&&d.departTime&&new Date(arriveTime)<=new Date(d.departTime)) return alert("도착 시간이 출발 시간보다 빠릅니다.");
+    const overlap=S.drives.find(dr=>{
+      if(dr.vehicleId!==d?.vehicleId||!dr.arriveTime||dr.id===S.sheetId) return false;
+      const ds=new Date(d.departTime),de=new Date(arriveTime),rs=new Date(dr.departTime),re=new Date(dr.arriveTime);
+      return ds<re&&de>rs;
+    });
+    if(overlap) return alert(`도착 시간이 기존 주행 기록과 겹칩니다.\n(${dtFmt(overlap.departTime)} ~ ${dtFmt(overlap.arriveTime)})\n시간을 다시 확인해주세요.`);
     await fsUpdate("drives",S.sheetId,{arriveTime,odometer,photo:photoDataURL});
     set({drives:S.drives.map(d=>d.id===S.sheetId?{...d,arriveTime,odometer,photo:photoDataURL}:d),sheet:null});
   }else if(s==="maint"){
@@ -630,7 +655,15 @@ function handlePrint(){
 }
 
 // ── Load ───────────────────────────────────────────────────
-window.loadData=async function(){
+window.updateOdoStart=function(vid){
+  const lastDrive=S.drives.find(d=>d.vehicleId===vid&&d.odometer);
+  const odoStart=lastDrive?lastDrive.odometer:"";
+  const el=document.getElementById("f_odo_start");
+  const lb=document.getElementById("odo_auto_label");
+  if(el) el.value=odoStart;
+  if(lb) lb.textContent=odoStart?"✅ 이전 기록에서 자동 입력":"";
+};
+
   set({loading:true,error:null});
   try{
     const[v,d,m,f]=await Promise.all([fsGet("vehicles"),fsGet("drives"),fsGet("maints"),fsGet("fuels")]);
