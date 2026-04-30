@@ -62,6 +62,10 @@
     .tsg button{padding:6px 14px;border-radius:20px;font-size:13px;border:1px solid #ddd;background:#fff;cursor:pointer;color:#666}
     .tsg button.on{background:#4A90E2;color:#fff;border-color:#4A90E2;font-weight:500}
     .ibox{background:#f8f8f8;border-radius:10px;padding:12px;margin-bottom:14px;font-size:13px;color:#666}
+    .imgview{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px}
+    .imgview img{max-width:100%;max-height:85vh;border-radius:8px;object-fit:contain}
+    .imgview .ivcls{position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:28px;border-radius:50%;width:44px;height:44px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+    .imgview .ivlb{color:#fff;font-size:13px;margin-top:12px;opacity:0.7}
     @keyframes spin{to{transform:rotate(360deg)}}
   </style>
 </head>
@@ -72,7 +76,7 @@ import{initializeApp,getApps}from"https://www.gstatic.com/firebasejs/10.12.0/fir
 import{getFirestore,collection,addDoc,getDocs,deleteDoc,doc,updateDoc,orderBy,query}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const FBC={apiKey:"AIzaSyCPvMbFfXHUgkYfJ3ZRcp5ypATRo8xLOAo",authDomain:"corporate-vehicle.firebaseapp.com",projectId:"corporate-vehicle",storageBucket:"corporate-vehicle.firebasestorage.app",messagingSenderId:"419510195247",appId:"1:419510195247:web:602f11bb4696102b1ca2da"};
-const GMK="AIzaSyAhYeWAWNx5r-EljO466VjN6tvVaYllLig";
+const CLAUDE_KEY="YOUR_CLAUDE_API_KEY"; // Claude API 키 입력
 const fb=getApps().length?getApps()[0]:initializeApp(FBC);
 const db=getFirestore(fb);
 
@@ -82,10 +86,20 @@ async function fsDel(col,id){await deleteDoc(doc(db,col,id));}
 async function fsUpd(col,id,data){await updateDoc(doc(db,col,id),data);}
 
 async function callAI(parts){
-  const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GMK}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts}]})});
+  // 이미지와 텍스트를 Claude API 형식으로 변환
+  const content=parts.map(p=>{
+    if(p.inlineData) return{type:"image",source:{type:"base64",media_type:p.inlineData.mimeType,data:p.inlineData.data}};
+    if(p.text) return{type:"text",text:p.text};
+    return null;
+  }).filter(Boolean);
+  const r=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","x-api-key":CLAUDE_KEY,"anthropic-version":"2023-06-01"},
+    body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:500,messages:[{role:"user",content}]})
+  });
   const d=await r.json();
-  if(d.error){console.error("Gemini error:",d.error);return"";}
-  return d.candidates?.[0]?.content?.parts?.[0]?.text||"";
+  if(d.error){console.error("Claude API error:",d.error);return"";}
+  return d.content?.[0]?.text||"";
 }
 
 const toB64=f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(f);});
@@ -170,7 +184,7 @@ function rDrives(){
   return`<div class="sh"><h2>주행 기록</h2><button class="ab" style="background:${C.drive}" data-sheet="drive">+ 출발</button></div>
   <div class="ct">${S.drives.length===0?`<div class="emp"><div class="ei">🚗</div><div>주행 기록이 없습니다</div></div>`:S.drives.map(d=>{
     const rk=d.odometer&&d.odoStart?Number(d.odometer)-Number(d.odoStart):null;
-    return`<div class="card"><div style="display:flex;gap:10px">${d.photo?`<img class="th" src="${d.photo}"/>`:""}
+    return`<div class="card"><div style="display:flex;gap:10px">${d.photo?`<img class="th" src="${d.photo}" style="cursor:pointer" onclick="openImg('${d.photo}','계기판 · ${veh(d.vehicleId)?.name||""} ${df(d.arriveTime)}')"/>`:""}
       <div style="flex:1;min-width:0">
         <div class="rw"><span class="bdg" style="background:${C.drive}22;color:${C.drive}">${veh(d.vehicleId)?.name||"-"}</span>${!d.arriveTime?`<span style="background:#E74C3C22;color:#E74C3C;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:500">🔴 운행 중</span>`:`<span style="background:#27AE6022;color:#27AE60;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:500">🟢 복귀</span>`}</div>
         <div class="ct2">${d.from} → ${d.to}</div>
@@ -186,13 +200,13 @@ function rDrives(){
 // ── Maints ──────────────────────────────────────────────
 function rMaints(){
   return`<div class="sh"><h2>정비 기록</h2><button class="ab" style="background:${C.maint}" data-sheet="maint">+ 추가</button></div>
-  <div class="ct">${S.maints.length===0?`<div class="emp"><div class="ei">🔧</div><div>정비 기록이 없습니다</div></div>`:S.maints.map(m=>`<div class="card"><div style="display:flex;gap:10px">${m.photo?(m.photo.startsWith("data:application/pdf")?`<div class="pt">📄</div>`:`<img class="th" src="${m.photo}"/>`):""}<div style="flex:1;min-width:0"><div class="rw"><span class="bdg" style="background:${C.maint}22;color:${C.maint}">${veh(m.vehicleId)?.name||"-"}</span><span style="font-size:11px;color:#888">${veh(m.vehicleId)?.plate||""}</span><span style="font-size:12px;color:#888">${m.date}</span></div><div class="ct2">${m.type}</div><div class="cs">${m.shop||""}${m.cost?` · ${nf(m.cost)}원`:""}</div>${m.note?`<div style="font-size:12px;color:#aaa;margin-top:2px">${m.note}</div>`:""}</div></div><div class="cf"><button class="db" data-del="maints" data-id="${m.id}">삭제</button></div></div>`).join("")}</div>`;
+  <div class="ct">${S.maints.length===0?`<div class="emp"><div class="ei">🔧</div><div>정비 기록이 없습니다</div></div>`:S.maints.map(m=>`<div class="card"><div style="display:flex;gap:10px">${m.photo?(m.photo.startsWith("data:application/pdf")?`<div class="pt">📄</div>`:`<img class="th" src="${m.photo}" style="cursor:pointer" onclick="openImg('${m.photo}','정비내역서 · ${veh(m.vehicleId)?.name||""} ${m.date}')"/>`):""}<div style="flex:1;min-width:0"><div class="rw"><span class="bdg" style="background:${C.maint}22;color:${C.maint}">${veh(m.vehicleId)?.name||"-"}</span><span style="font-size:11px;color:#888">${veh(m.vehicleId)?.plate||""}</span><span style="font-size:12px;color:#888">${m.date}</span></div><div class="ct2">${m.type}</div><div class="cs">${m.shop||""}${m.cost?` · ${nf(m.cost)}원`:""}${m.odometer?` · ${nf(m.odometer)}km`:""}</div>${m.note?`<div style="font-size:12px;color:#aaa;margin-top:2px">${m.note}</div>`:""}</div></div><div class="cf"><button class="db" data-del="maints" data-id="${m.id}">삭제</button></div></div>`).join("")}</div>`;
 }
 
 // ── Fuels ───────────────────────────────────────────────
 function rFuels(){
   return`<div class="sh"><h2>주유 기록</h2><button class="ab" style="background:${C.fuel}" data-sheet="fuel">+ 추가</button></div>
-  <div class="ct">${S.fuels.length===0?`<div class="emp"><div class="ei">⛽</div><div>주유 기록이 없습니다</div></div>`:S.fuels.map(f=>`<div class="card"><div style="display:flex;gap:10px">${f.photo?`<img class="th" src="${f.photo}"/>`:""}
+  <div class="ct">${S.fuels.length===0?`<div class="emp"><div class="ei">⛽</div><div>주유 기록이 없습니다</div></div>`:S.fuels.map(f=>`<div class="card"><div style="display:flex;gap:10px">${f.photo?`<img class="th" src="${f.photo}" style="cursor:pointer" onclick="openImg('${f.photo}','주유영수증 · ${veh(f.vehicleId)?.name||""} ${f.date}')"/>`:""}
   <div style="flex:1;min-width:0"><div class="rw"><span class="bdg" style="background:${C.fuel}22;color:${C.fuel}">${veh(f.vehicleId)?.name||"-"}</span><span style="font-size:11px;color:#888">${veh(f.vehicleId)?.plate||""}</span><span style="font-size:12px;color:#888">${f.date}</span></div><div class="ct2">${f.station||"주유소"}</div><div class="cs">${f.liters?f.liters+"L":""}${f.amount?` · ${nf(f.amount)}원`:""}${f.driver?` · ${f.driver}`:""}</div></div></div><div class="cf"><button class="db" data-del="fuels" data-id="${f.id}">삭제</button></div></div>`).join("")}</div>`;
 }
 
@@ -229,7 +243,19 @@ function rVehs(){
   <div class="ct">${S.vehicles.length===0?`<div class="emp"><div class="ei">📋</div><div>등록된 차량이 없습니다</div></div>`:S.vehicles.map(v=>`<div class="vc"><div class="vi" style="background:${v.color||C.drive}22">🚗</div><div style="flex:1"><div style="font-weight:500;font-size:15px">${v.name}</div><div style="font-size:13px;color:#888">${v.plate}${v.dept?` · ${v.dept}`:""}</div></div><button class="db" data-del="vehicles" data-id="${v.id}">삭제</button></div>`).join("")}</div>`;
 }
 
-// ── Sheet Body ───────────────────────────────────────────
+// ── Image Viewer ─────────────────────────────────────────
+function openImg(src,label){
+  const existing=document.getElementById("imgViewer");
+  if(existing)existing.remove();
+  const div=document.createElement("div");
+  div.className="imgview";div.id="imgViewer";
+  div.innerHTML=`<button class="ivcls" id="ivClose">×</button><img src="${src}"/><div class="ivlb">${label||"사진"} · 탭하여 닫기</div>`;
+  div.onclick=()=>div.remove();
+  document.body.appendChild(div);
+  document.getElementById("ivClose").onclick=e=>{e.stopPropagation();div.remove();};
+}
+
+
 const vOpts=()=>S.vehicles.map(v=>`<option value="${v.id}">${v.name} (${v.plate})</option>`).join("");
 
 function bSheet(){
@@ -251,14 +277,12 @@ function bSheet(){
     return`<div class="ibox"><div style="font-weight:500;color:#1a1a1a;margin-bottom:4px">${veh(d?.vehicleId)?.name||"-"} · ${veh(d?.vehicleId)?.plate||""} · ${d?.driver||"-"}</div><div>${d?.from||""} → ${d?.to||""}</div><div style="margin-top:2px">출발: ${df(d?.departTime)||"-"}</div>${d?.odoStart?`<div style="margin-top:2px">출발 총주행: ${nf(d.odoStart)}km</div>`:""}</div>
     <div class="fld"><label>도착 일시 *</label><input type="datetime-local" id="f_arrive" value="${nowLocal()}"/></div>
     <div class="fld"><label>도착 시 총주행거리 (km)</label><input type="number" id="f_odometer" placeholder="45231"/></div>
-    <div class="fld"><label>계기판 사진 (AI 자동 인식)</label><div class="pb" id="pbox"><div style="font-size:28px">📷</div><div style="font-size:12px;color:#aaa">탭하여 업로드</div></div><input type="file" id="pfi" accept="image/*" style="display:none"/></div>
-    <div id="aim" style="display:none"></div>
+    <div class="fld"><label>계기판 사진 (근거 첨부용)</label><div class="pb" id="pbox"><div style="font-size:28px">📷</div><div style="font-size:12px;color:#aaa">탭하여 업로드</div></div><input type="file" id="pfi" accept="image/*" style="display:none"/></div>
     <button class="svb" id="svb" style="background:${C.drive}">복귀 완료</button>`;
   }
   if(s==="maint")return`
     <div class="g2"><div class="fld"><label>차량 *</label><select id="f_vid">${vOpts()}</select></div><div class="fld"><label>날짜 *</label><input type="date" id="f_date" value="${today()}"/></div></div>
-    <div class="fld"><label>명세표/등록증 (PDF·이미지, AI 자동 인식)</label><div class="pb" id="pbox"><div style="font-size:28px">📷</div><div style="font-size:12px;color:#aaa">탭하여 업로드</div></div><input type="file" id="pfi" accept="image/*,application/pdf" style="display:none"/></div>
-    <div id="aim" style="display:none"></div>
+    <div class="fld"><label>명세표/등록증 (근거 첨부용, PDF·이미지)</label><div class="pb" id="pbox"><div style="font-size:28px">📷</div><div style="font-size:12px;color:#aaa">탭하여 업로드</div></div><input type="file" id="pfi" accept="image/*,application/pdf" style="display:none"/></div>
     <div class="fld"><label>정비 항목 *</label><input id="f_type" placeholder="엔진오일 교환"/></div>
     <div class="g2"><div class="fld"><label>정비소</label><input id="f_shop" placeholder="○○ 자동차"/></div><div class="fld"><label>비용 (원)</label><input type="number" id="f_cost" placeholder="50000"/></div></div>
     <div class="fld"><label>정비 시 총주행거리 (km)</label><input type="number" id="f_maint_odo" placeholder="45231"/></div>
