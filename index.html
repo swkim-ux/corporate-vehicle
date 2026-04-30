@@ -343,7 +343,11 @@ function bSheet(){
     var ld=S.drives.find(function(d){return d.vehicleId===vid&&d.odometer;});
     var os=ld?ld.odometer:"";
     var vOptsDrive=S.vehicles.map(function(v){return '<option value="'+v.id+'"'+(v.id===vid?" selected":"")+'>'+v.name+' ('+v.plate+')</option>';}).join("");
-    return (rv?'<div style="background:#EEF4FF;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:'+C.resv+'">📅 예약 정보 자동 입력 · 출발 등록 시 예약은 삭제됩니다</div>':"")
+    // 해당 차량의 향후 예약 목록
+    var now=new Date();
+    var vResv=S.reservations.filter(function(r){return r.vehicleId===vid&&new Date(r.endTime)>=now;}).sort(function(a,b){return a.startTime.localeCompare(b.startTime);}).slice(0,3);
+    var resvInfo=vResv.length>0?'<div id="resv_info" style="background:#FFF8E7;border:1px solid #FFCA2C;border-radius:8px;padding:10px 12px;margin-bottom:12px"><div style="font-size:12px;font-weight:500;color:#856404;margin-bottom:6px">⚠️ 이 차량의 예약 현황</div>'+vResv.map(function(r){return '<div style="font-size:12px;color:#856404;padding:3px 0;border-bottom:0.5px solid #FFCA2C22">'+r.name+' · '+df(r.startTime)+' ~ '+df(r.endTime).slice(11,16)+(r.purpose?' ('+r.purpose+')':'')+'</div>';}).join("")+'</div>':'<div id="resv_info" style="display:none"></div>';'<div style="background:#EEF4FF;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:'+C.resv+'">📅 예약 정보 자동 입력 · 출발 등록 시 예약은 삭제됩니다</div>':"")
+      +resvInfo
       +'<div class="fld"><label>차량 *</label><select id="f_vid" onchange="window.updOdo(this.value)">'+vOptsDrive+'</select></div>'
       +'<div class="fld"><label>운전자 *</label><input id="f_driver" placeholder="홍길동" value="'+(rv?rv.name:"")+'"/></div>'
       +'<div class="g2"><div class="fld"><label>출발지 *</label><input id="f_from" placeholder="본사" value="'+(rv?rv.from:"")+'"/></div><div class="fld"><label>목적지 *</label><input id="f_to" placeholder="거래처" value="'+(rv?rv.to:"")+'"/></div></div>'
@@ -419,6 +423,18 @@ window.updOdo=function(vid){
   var os=ld?ld.odometer:"";
   var el=document.getElementById("f_odo_start");if(el)el.value=os;
   var lb=document.getElementById("odo_lbl");if(lb)lb.textContent=os?"✅ 자동 입력":"";
+  // 예약 현황 업데이트
+  var now=new Date();
+  var vResv=S.reservations.filter(function(r){return r.vehicleId===vid&&new Date(r.endTime)>=now;}).sort(function(a,b){return a.startTime.localeCompare(b.startTime);}).slice(0,3);
+  var ri=document.getElementById("resv_info");
+  if(ri){
+    if(vResv.length>0){
+      ri.style.display="block";
+      ri.innerHTML='<div style="font-size:12px;font-weight:500;color:#856404;margin-bottom:6px">⚠️ 이 차량의 예약 현황</div>'+vResv.map(function(r){return '<div style="font-size:12px;color:#856404;padding:3px 0;border-bottom:0.5px solid #FFCA2C22">'+r.name+' · '+df(r.startTime)+' ~ '+df(r.endTime).slice(11,16)+(r.purpose?' ('+r.purpose+')':'')+'</div>';}).join("");
+    } else {
+      ri.style.display="none";
+    }
+  }
 };
 
 // ── Save ─────────────────────────────────────────────────
@@ -445,6 +461,14 @@ async function doSave(){
     var nd=new Date(dep);
     var ov=S.drives.find(function(d){if(d.vehicleId!==vid||!d.arriveTime)return false;return nd>=new Date(d.departTime)&&nd<=new Date(d.arriveTime);});
     if(ov)return alert("출발 시간이 기존 주행 기록과 겹칩니다.\n("+df(ov.departTime)+" ~ "+df(ov.arriveTime)+")");
+    // 예약 시간 차단 (예약자 본인 제외)
+    var driver=gv("f_driver");
+    var ovResv=S.reservations.find(function(r){
+      if(r.vehicleId!==vid) return false;
+      if(r.name===driver) return false; // 예약자 본인은 허용
+      return nd>=new Date(r.startTime)&&nd<=new Date(r.endTime);
+    });
+    if(ovResv)return alert("이 차량은 예약된 시간입니다.\n예약자: "+ovResv.name+"\n("+df(ovResv.startTime)+" ~ "+df(ovResv.endTime).slice(11,16)+")\n예약자 본인만 출발 등록할 수 있습니다.");
     var ld=S.drives.find(function(d){return d.vehicleId===vid&&d.odometer;});
     var autoOs=ld?ld.odometer:"";
     var inputOs=gv("f_odo_start");
@@ -453,9 +477,21 @@ async function doSave(){
     var data={vehicleId:vid,driver:gv("f_driver"),date:today(),departTime:dep,arriveTime:"",from:gv("f_from"),to:gv("f_to"),purpose:gv("f_purpose"),odoStart:odoStart,odoStartModified:odoStartModified,odometer:"",photo:null};
     var id=await fsAdd("drives",data);
     var newDrive=Object.assign({id:id},data,{createdAt:Date.now()});
+    // 예약자 본인 예약 자동 삭제 (예약탭 출발 또는 주행탭 직접 출발 모두 처리)
+    var matchedResvId=null;
     if(S.sheetId&&S.resvData){
-      await fsDel("reservations",S.sheetId);
-      set({drives:[newDrive].concat(S.drives),reservations:S.reservations.filter(function(r){return r.id!==S.sheetId;}),sheet:null,resvData:null});
+      matchedResvId=S.sheetId;
+    } else {
+      var driver=gv("f_driver");
+      var matched=S.reservations.find(function(r){
+        if(r.vehicleId!==vid||r.name!==driver) return false;
+        return new Date(dep)>=new Date(r.startTime)&&new Date(dep)<=new Date(r.endTime);
+      });
+      if(matched) matchedResvId=matched.id;
+    }
+    if(matchedResvId){
+      await fsDel("reservations",matchedResvId);
+      set({drives:[newDrive].concat(S.drives),reservations:S.reservations.filter(function(r){return r.id!==matchedResvId;}),sheet:null,resvData:null});
     } else {
       set({drives:[newDrive].concat(S.drives),sheet:null});
     }
