@@ -455,7 +455,7 @@ function rDrives() {
     var v = veh(d.vehicleId);
     var rk = (d.odometer && d.odoStart) ? Number(d.odometer) - Number(d.odoStart) : null;
     var photo = d.photo ? '<img class="th" src="' + d.photo + '" data-src="' + d.photo + '" data-label="계기판 · ' + (v ? v.name : "") + '" data-viewer="1"/>' : "";
-    var sub = (v ? v.plate : "") + (d.driver ? " · " + d.driver : "")
+    var sub = (v ? v.plate : "") + (d.driver ? " · " + d.driver + (d.driverPhone ? mkPhone(d.driverPhone) : "") : "")
       + (d.departTime ? "<br>출발 " + df(d.departTime) : "")
       + (d.arriveTime ? " · 도착 " + df(d.arriveTime) : "")
       + (d.odoStart ? "<br>" + nf(d.odoStart) + "km" : "")
@@ -511,12 +511,16 @@ function rRecords() {
               ? '<div class="pt">📄</div>'
               : '<img class="th" src="' + m.photo + '" data-src="' + m.photo + '" data-label="정비내역서 · ' + (v ? v.name : "") + ' ' + m.date + '" data-viewer="1"/>')
           : "";
+        var mDt = m.datetime || m.date || "";
         return '<div class="card"><div style="display:flex;gap:10px">' + photo
           + '<div style="flex:1;min-width:0">'
           + '<div class="rw"><span class="bdg" style="background:' + C.maint + '18;color:' + C.maint + '">' + (v ? v.name : "-") + '</span>'
-          + '<span style="font-size:12px;color:#8E8E93">' + m.date + '</span></div>'
+          + '<span style="font-size:12px;color:#8E8E93">' + df(mDt) + '</span></div>'
           + '<div class="ct2">' + m.type + '</div>'
-          + '<div class="cs">' + (m.shop || "") + (m.cost ? " · " + nf(m.cost) + "원" : "") + (m.odometer ? " · " + nf(m.odometer) + "km" : "") + '</div>'
+          + '<div class="cs">'
+          + (m.shop ? m.shop : "") + (m.cost ? " · " + nf(m.cost) + "원" : "") + (m.odometer ? " · " + nf(m.odometer) + "km" : "")
+          + (m.driver ? '<br>🧑 ' + m.driver + (m.phone ? mkPhone(m.phone) : "") : "")
+          + '</div>'
           + (m.note ? '<div style="font-size:12px;color:#C7C7CC;margin-top:2px">' + m.note + '</div>' : "")
           + '</div></div>'
           + '<div class="cf"><button class="btn-del" data-del="maints" data-id="' + m.id + '">삭제</button></div></div>';
@@ -528,12 +532,16 @@ function rRecords() {
     : S.fuels.map(function(f) {
         var v = veh(f.vehicleId);
         var photo = f.photo ? '<img class="th" src="' + f.photo + '" data-src="' + f.photo + '" data-label="주유영수증 · ' + (v ? v.name : "") + ' ' + f.date + '" data-viewer="1"/>' : "";
+        var fDt = f.datetime || f.date || "";
         return '<div class="card"><div style="display:flex;gap:10px">' + photo
           + '<div style="flex:1;min-width:0">'
           + '<div class="rw"><span class="bdg" style="background:' + C.fuel + '18;color:' + C.fuel + '">' + (v ? v.name : "-") + '</span>'
-          + '<span style="font-size:12px;color:#8E8E93">' + f.date + '</span></div>'
+          + '<span style="font-size:12px;color:#8E8E93">' + df(fDt) + '</span></div>'
           + '<div class="ct2">' + (f.station || "주유소") + '</div>'
-          + '<div class="cs">' + (f.liters ? f.liters + "L" : "") + (f.amount ? " · " + nf(f.amount) + "원" : "") + (f.driver ? " · " + f.driver : "") + '</div>'
+          + '<div class="cs">'
+          + (f.liters ? f.liters + "L" : "") + (f.amount ? " · " + nf(f.amount) + "원" : "")
+          + (f.driver ? '<br>🧑 ' + f.driver + (f.phone ? mkPhone(f.phone) : "") : "")
+          + '</div>'
           + '</div></div>'
           + '<div class="cf"><button class="btn-del" data-del="fuels" data-id="' + f.id + '">삭제</button></div></div>';
       }).join("");
@@ -635,11 +643,14 @@ function rReport() {
       ? '<div class="emp"><div class="ei">🔧</div><div class="em">정비 기록 없음</div></div>'
       : fm.map(function(m) {
           var v = veh(m.vehicleId);
+          var mDt = m.datetime || m.date || "";
           return '<div class="card">'
             + '<div class="rw"><span class="bdg" style="background:' + C.maint + '18;color:' + C.maint + '">' + (v ? v.name : "-") + '</span>'
-            + '<span style="font-size:12px;color:#8E8E93">' + m.date + '</span></div>'
+            + '<span style="font-size:12px;color:#8E8E93">' + df(mDt) + '</span></div>'
             + '<div class="ct2">' + m.type + '</div>'
-            + '<div class="cs">' + (m.shop || "") + (m.cost ? " · " + nf(m.cost) + "원" : "") + '</div></div>';
+            + '<div class="cs">' + (m.shop || "") + (m.cost ? " · " + nf(m.cost) + "원" : "")
+            + (m.driver ? ' · 🧑 ' + m.driver + (m.phone ? mkPhone(m.phone) : "") : "")
+            + '</div></div>';
         }).join("");
   } else {
     stats = [{ lb: "주유 건수", v: ff.length + "건", c: C.fuel }, { lb: "주유량", v: tl.toFixed(1) + "L", c: C.fuel }, { lb: "총 금액", v: nf(tf) + "원", c: C.fuel }];
@@ -647,11 +658,14 @@ function rReport() {
       ? '<div class="emp"><div class="ei">⛽</div><div class="em">주유 기록 없음</div></div>'
       : ff.map(function(f) {
           var v = veh(f.vehicleId);
+          var fDt = f.datetime || f.date || "";
           return '<div class="card">'
             + '<div class="rw"><span class="bdg" style="background:' + C.fuel + '18;color:' + C.fuel + '">' + (v ? v.name : "-") + '</span>'
-            + '<span style="font-size:12px;color:#8E8E93">' + f.date + '</span></div>'
+            + '<span style="font-size:12px;color:#8E8E93">' + df(fDt) + '</span></div>'
             + '<div class="ct2">' + (f.station || "주유소") + '</div>'
-            + '<div class="cs">' + (f.liters ? f.liters + "L" : "") + (f.amount ? " · " + nf(f.amount) + "원" : "") + (f.driver ? " · " + f.driver : "") + '</div></div>';
+            + '<div class="cs">' + (f.liters ? f.liters + "L" : "") + (f.amount ? " · " + nf(f.amount) + "원" : "")
+            + (f.driver ? ' · 🧑 ' + f.driver + (f.phone ? mkPhone(f.phone) : "") : "")
+            + '</div></div>';
         }).join("");
   }
 
@@ -764,7 +778,8 @@ function bSheet() {
       : "";
     return rvBanner + resvInfoHtml
       + '<div class="fld"><label>차량 *</label><select id="f_vid" onchange="window.updOdo(this.value)">' + vOptsDrive + '</select></div>'
-      + '<div class="fld"><label>운전자 *</label><input id="f_driver" placeholder="홍길동" value="' + (rv ? rv.name : "") + '"/></div>'
+      + '<div class="g2"><div class="fld"><label>운전자 *</label><input id="f_driver" placeholder="홍길동" value="' + (rv ? rv.name : "") + '"/></div>'
+      + '<div class="fld"><label>연락처</label><input id="f_driver_phone" type="tel" placeholder="010-1234-5678" inputmode="tel" value="' + (rv ? (rv.phone || "") : "") + '"/></div></div>'
       + '<div class="g2"><div class="fld"><label>출발지 *</label><input id="f_from" placeholder="본사" value="' + (rv ? rv.from : "") + '"/></div>'
       + '<div class="fld"><label>목적지 *</label><input id="f_to" placeholder="거래처" value="' + (rv ? rv.to : "") + '"/></div></div>'
       + '<div class="fld"><label>출발 일시 *</label><input type="datetime-local" id="f_depart" value="' + (rv ? rv.startTime : nowLocal()) + '"/></div>'
@@ -792,8 +807,16 @@ function bSheet() {
   }
 
   if (s === "maint") {
-    return '<div class="g2"><div class="fld"><label>차량 *</label><select id="f_vid">' + vOpts + '</select></div>'
-      + '<div class="fld"><label>날짜 *</label><input type="date" id="f_date" value="' + today() + '"/></div></div>'
+    return '<div class="fld"><label>차량 *</label>'
+      + '<select id="f_vid" onchange="window.autoFillDriver(\'maint\')">' + vOpts + '</select></div>'
+      + '<div class="fld"><label>집행 일시 *</label>'
+      + '<input type="datetime-local" id="f_datetime" value="' + nowLocal() + '" onchange="window.autoFillDriver(\'maint\')"/></div>'
+      + '<div style="background:#F2F2F7;border-radius:12px;padding:14px;margin-bottom:16px">'
+      + '<div style="font-size:13px;font-weight:600;color:#3C3C43;margin-bottom:4px">🧑 집행 당시 운전자</div>'
+      + '<div id="driver_auto_info" style="font-size:12px;margin-bottom:10px;display:none"></div>'
+      + '<div class="g2"><div class="fld" style="margin-bottom:0"><label>성명</label><input id="f_maint_driver" placeholder="자동 조회됨"/></div>'
+      + '<div class="fld" style="margin-bottom:0"><label>연락처</label><input id="f_maint_phone" type="tel" placeholder="010-1234-5678" inputmode="tel"/></div></div>'
+      + '</div>'
       + '<div class="fld"><label>명세표/등록증 (PDF·이미지)</label>'
       + '<div class="pb" id="pbox"><div style="font-size:32px">📷</div><div style="font-size:13px;color:#8E8E93">탭하여 업로드</div></div>'
       + '<input type="file" id="pfi" accept="image/*,application/pdf" style="display:none"/></div>'
@@ -806,10 +829,17 @@ function bSheet() {
   }
 
   if (s === "fuel") {
-    return '<div class="g2"><div class="fld"><label>차량 *</label><select id="f_vid">' + vOpts + '</select></div>'
-      + '<div class="fld"><label>날짜 *</label><input type="date" id="f_date" value="' + today() + '"/></div></div>'
-      + '<div class="g2"><div class="fld"><label>운전자</label><input id="f_driver" placeholder="홍길동"/></div>'
-      + '<div class="fld"><label>주유소</label><input id="f_station" placeholder="GS칼텍스"/></div></div>'
+    return '<div class="fld"><label>차량 *</label>'
+      + '<select id="f_vid" onchange="window.autoFillDriver(\'fuel\')">' + vOpts + '</select></div>'
+      + '<div class="fld"><label>집행 일시 *</label>'
+      + '<input type="datetime-local" id="f_datetime" value="' + nowLocal() + '" onchange="window.autoFillDriver(\'fuel\')"/></div>'
+      + '<div style="background:#F2F2F7;border-radius:12px;padding:14px;margin-bottom:16px">'
+      + '<div style="font-size:13px;font-weight:600;color:#3C3C43;margin-bottom:4px">🧑 집행 당시 운전자</div>'
+      + '<div id="driver_auto_info" style="font-size:12px;margin-bottom:10px;display:none"></div>'
+      + '<div class="g2"><div class="fld" style="margin-bottom:0"><label>성명</label><input id="f_driver" placeholder="자동 조회됨"/></div>'
+      + '<div class="fld" style="margin-bottom:0"><label>연락처</label><input id="f_phone" type="tel" placeholder="010-1234-5678" inputmode="tel"/></div></div>'
+      + '</div>'
+      + '<div class="fld"><label>주유소</label><input id="f_station" placeholder="GS칼텍스"/></div>'
       + '<div class="g2"><div class="fld"><label>주유량 (L)</label><input type="number" step="0.1" id="f_liters" placeholder="45.5" inputmode="decimal"/></div>'
       + '<div class="fld"><label>금액 (원)</label><input type="number" id="f_amount" placeholder="80000" inputmode="numeric"/></div></div>'
       + '<div class="fld"><label>영수증 사진</label>'
@@ -956,6 +986,54 @@ function openImg(el) {
 }
 
 /* ── WINDOW HELPERS ──────────────────── */
+
+// 집행 일시에 해당 차량을 주행 중인 운전자를 자동 조회
+window.autoFillDriver = function(type) {
+  var vid = gv("f_vid");
+  var dt  = gv("f_datetime");
+  if (!vid || !dt) return;
+  var t = new Date(dt);
+  var infoEl = document.getElementById("driver_auto_info");
+
+  // 해당 차량·시간대의 주행 기록 검색
+  var match = null;
+  for (var i = 0; i < S.drives.length; i++) {
+    var d = S.drives[i];
+    if (d.vehicleId !== vid || !d.departTime) continue;
+    var s = new Date(d.departTime);
+    // 복귀 완료된 기록: departTime ~ arriveTime 범위
+    if (d.arriveTime) {
+      if (t >= s && t <= new Date(d.arriveTime)) { match = d; break; }
+    } else {
+      // 아직 운행 중: 출발 시간 이후면 매칭
+      if (t >= s) { match = d; break; }
+    }
+  }
+
+  var driverEl = document.getElementById(type === "maint" ? "f_maint_driver" : "f_driver");
+  var phoneEl  = document.getElementById(type === "maint" ? "f_maint_phone"  : "f_phone");
+
+  if (match) {
+    if (driverEl) driverEl.value = match.driver || "";
+    if (phoneEl)  phoneEl.value  = match.driverPhone || "";
+    if (infoEl) {
+      infoEl.style.display = "block";
+      infoEl.style.color = "#34C759";
+      infoEl.textContent = "✅ 주행 기록에서 자동 입력 · "
+        + df(match.departTime) + " ~ "
+        + (match.arriveTime ? df(match.arriveTime) : "운행 중");
+    }
+  } else {
+    if (driverEl) driverEl.value = "";
+    if (phoneEl)  phoneEl.value  = "";
+    if (infoEl) {
+      infoEl.style.display = "block";
+      infoEl.style.color = "#FF9500";
+      infoEl.textContent = "⚠️ 해당 시간에 이 차량의 주행 기록이 없습니다";
+    }
+  }
+};
+
 window.updOdo = function(vid) {
   var ld = S.drives.find(function(d) { return d.vehicleId === vid && d.odometer; });
   var os = ld ? ld.odometer : "";
@@ -1028,7 +1106,7 @@ async function doSave() {
     var inputOs = gv("f_odo_start");
     var odoStart = inputOs || autoOs;
     var odoStartModified = (autoOs && inputOs && inputOs !== autoOs) ? "Y" : "N";
-    var data = { vehicleId: vid, driver: driver, date: today(), departTime: dep, arriveTime: "", from: gv("f_from"), to: gv("f_to"), purpose: gv("f_purpose"), odoStart: odoStart, odoStartModified: odoStartModified, odometer: "", photo: null };
+    var data = { vehicleId: vid, driver: driver, driverPhone: gv("f_driver_phone"), date: today(), departTime: dep, arriveTime: "", from: gv("f_from"), to: gv("f_to"), purpose: gv("f_purpose"), odoStart: odoStart, odoStartModified: odoStartModified, odometer: "", photo: null };
     var id = await fsAdd("drives", data);
     var newDrive = Object.assign({ id: id }, data, { createdAt: Date.now() });
     var matchedResvId = null;
@@ -1063,14 +1141,29 @@ async function doSave() {
     set({ drives: S.drives.map(function(d) { return d.id === S.sheetId ? Object.assign({}, d, { arriveTime: at, odometer: odo, photo: PDU }) : d; }), sheet: null });
 
   } else if (s === "maint") {
-    var data = { vehicleId: gv("f_vid"), date: gv("f_date"), type: gv("f_type"), shop: gv("f_shop"), cost: gv("f_cost"), odometer: gv("f_maint_odo"), note: gv("f_note"), photo: PDU };
-    if (!data.vehicleId || !data.date || !data.type) return alert("필수 항목(*)을 모두 입력해주세요.");
+    var dt = gv("f_datetime");
+    var data = {
+      vehicleId: gv("f_vid"),
+      datetime: dt, date: dt.slice(0, 10),   // date kept for filter compat
+      type: gv("f_type"), shop: gv("f_shop"), cost: gv("f_cost"),
+      odometer: gv("f_maint_odo"), note: gv("f_note"),
+      driver: gv("f_maint_driver"), phone: gv("f_maint_phone"),
+      photo: PDU
+    };
+    if (!data.vehicleId || !data.datetime || !data.type) return alert("필수 항목(*)을 모두 입력해주세요.");
     var id = await fsAdd("maints", data);
     set({ maints: [Object.assign({ id: id }, data, { createdAt: Date.now() })].concat(S.maints), sheet: null });
 
   } else if (s === "fuel") {
-    var data = { vehicleId: gv("f_vid"), date: gv("f_date"), driver: gv("f_driver"), station: gv("f_station"), liters: gv("f_liters"), amount: gv("f_amount"), photo: PDU };
-    if (!data.vehicleId || !data.date) return alert("필수 항목(*)을 입력해주세요.");
+    var dt = gv("f_datetime");
+    var data = {
+      vehicleId: gv("f_vid"),
+      datetime: dt, date: dt.slice(0, 10),   // date kept for filter compat
+      driver: gv("f_driver"), phone: gv("f_phone"),
+      station: gv("f_station"), liters: gv("f_liters"), amount: gv("f_amount"),
+      photo: PDU
+    };
+    if (!data.vehicleId || !data.datetime) return alert("필수 항목(*)을 입력해주세요.");
     var id = await fsAdd("fuels", data);
     set({ fuels: [Object.assign({ id: id }, data, { createdAt: Date.now() })].concat(S.fuels), sheet: null });
 
@@ -1116,19 +1209,21 @@ function doPrint() {
         }).join("")
       + '</tbody></table>';
   } else if (rTab === "maint") {
-    tbl = '<table><thead><tr><th>차량명</th><th>차량번호</th><th>날짜</th><th>정비 항목</th><th>정비소</th><th>비용(원)</th><th>메모</th></tr></thead><tbody>'
+    tbl = '<table><thead><tr><th>차량명</th><th>차량번호</th><th>집행 일시</th><th>정비 항목</th><th>정비소</th><th>비용(원)</th><th>운전자</th><th>연락처</th><th>메모</th></tr></thead><tbody>'
       + fm.map(function(m) {
           var v = veh(m.vehicleId);
-          return '<tr><td>' + (v ? v.name : "-") + '</td><td>' + (v ? v.plate : "-") + '</td><td>' + m.date + '</td><td>' + m.type + '</td><td>' + (m.shop || "") + '</td><td>' + (m.cost ? nf(m.cost) : "") + '</td><td>' + (m.note || "") + '</td></tr>';
+          var mDt = m.datetime || m.date || "";
+          return '<tr><td>' + (v ? v.name : "-") + '</td><td>' + (v ? v.plate : "-") + '</td><td>' + df(mDt) + '</td><td>' + m.type + '</td><td>' + (m.shop || "") + '</td><td>' + (m.cost ? nf(m.cost) : "") + '</td><td>' + (m.driver || "") + '</td><td>' + (m.phone || "") + '</td><td>' + (m.note || "") + '</td></tr>';
         }).join("")
-      + '<tr class="tot"><td colspan="5">합계</td><td>' + nf(tm) + '원</td><td></td></tr></tbody></table>';
+      + '<tr class="tot"><td colspan="5">합계</td><td>' + nf(tm) + '원</td><td colspan="3"></td></tr></tbody></table>';
   } else {
-    tbl = '<table><thead><tr><th>차량명</th><th>차량번호</th><th>날짜</th><th>운전자</th><th>주유소</th><th>주유량(L)</th><th>금액(원)</th></tr></thead><tbody>'
+    tbl = '<table><thead><tr><th>차량명</th><th>차량번호</th><th>집행 일시</th><th>운전자</th><th>연락처</th><th>주유소</th><th>주유량(L)</th><th>금액(원)</th></tr></thead><tbody>'
       + ff.map(function(f) {
           var v = veh(f.vehicleId);
-          return '<tr><td>' + (v ? v.name : "-") + '</td><td>' + (v ? v.plate : "-") + '</td><td>' + f.date + '</td><td>' + (f.driver || "") + '</td><td>' + (f.station || "") + '</td><td>' + (f.liters || "") + '</td><td>' + (f.amount ? nf(f.amount) : "") + '</td></tr>';
+          var fDt = f.datetime || f.date || "";
+          return '<tr><td>' + (v ? v.name : "-") + '</td><td>' + (v ? v.plate : "-") + '</td><td>' + df(fDt) + '</td><td>' + (f.driver || "") + '</td><td>' + (f.phone || "") + '</td><td>' + (f.station || "") + '</td><td>' + (f.liters || "") + '</td><td>' + (f.amount ? nf(f.amount) : "") + '</td></tr>';
         }).join("")
-      + '<tr class="tot"><td colspan="5">합계</td><td>' + tli.toFixed(1) + 'L</td><td>' + nf(tf) + '원</td></tr></tbody></table>';
+      + '<tr class="tot"><td colspan="6">합계</td><td>' + tli.toFixed(1) + 'L</td><td>' + nf(tf) + '원</td></tr></tbody></table>';
   }
   var w = window.open("", "_blank");
   if (!w) return alert("팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요.");
