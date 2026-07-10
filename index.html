@@ -251,7 +251,7 @@ function render() {
 
   var titles = {
     resv: "차량 예약", drive: "출발 등록", arrive: "복귀 입력",
-    maint: "정비 기록 추가", fuel: "주유 기록 추가", veh: "차량 등록"
+    maint: "정비 기록 추가", fuel: "주유 기록 추가", veh: "차량 등록", "veh-edit": "차량 정보 수정"
   };
   var sheetHtml = "";
   if (S.sheet) {
@@ -935,17 +935,42 @@ function rReport() {
 
 /* ── VEHICLES ────────────────────────── */
 function rVehs() {
+  var FUEL_IC = { '휘발유': '🟢', '경유': '🔵', 'LPG': '🟡', '전기': '⚡', '하이브리드': '♻️' };
   var cards = S.vehicles.length === 0
     ? '<div class="emp"><div class="ei">🚘</div><div class="em">등록된 차량이 없습니다</div>'
       + '<button class="emp-btn" style="background:' + C.veh + '" data-sheet="veh">+ 차량 등록</button></div>'
     : S.vehicles.map(function(v) {
-        return '<div class="vc">'
-          + '<div class="vi" style="background:' + (v.color || C.drive) + '1a">🚗</div>'
+        var fuelIc = v.fuel ? (FUEL_IC[v.fuel] || '⛽') : '';
+        var cycles = [];
+        if (v.oilKm || v.oilMonth) {
+          var s = '🔧 엔진오일';
+          if (v.oilKm)    s += ' ' + nf(v.oilKm) + 'km';
+          if (v.oilMonth) s += ' / ' + v.oilMonth + '개월';
+          cycles.push(s);
+        }
+        if (v.tireKm)   cycles.push('🔄 타이어 ' + nf(v.tireKm) + 'km');
+        if (v.airKm)    cycles.push('💨 에어필터 ' + nf(v.airKm) + 'km');
+        if (v.brakeMonth) cycles.push('🛑 브레이크액 ' + v.brakeMonth + '개월');
+        if (v.maintNote) cycles.push('📝 ' + v.maintNote);
+        return '<div class="card">'
+          + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:' + (cycles.length ? '10px' : '0') + '">'
+          + '<div style="width:44px;height:44px;border-radius:12px;background:' + (v.color || C.veh) + '1a;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🚗</div>'
           + '<div style="flex:1;min-width:0">'
-          + '<div style="font-weight:600;font-size:16px">' + v.name + '</div>'
-          + '<div style="font-size:13px;color:#8E8E93">' + v.plate + (v.dept ? " · " + v.dept : "") + '</div>'
-          + '</div>'
-          + '<button class="btn-del" data-del="vehicles" data-id="' + v.id + '">삭제</button></div>';
+          + '<div style="font-weight:700;font-size:16px">' + v.name + '</div>'
+          + '<div style="font-size:13px;color:#8E8E93;margin-top:1px">' + v.plate
+          + (v.dept ? ' · ' + v.dept : '')
+          + (v.fuel ? ' · ' + fuelIc + ' ' + v.fuel : '')
+          + '</div></div></div>'
+          + (cycles.length
+              ? '<div style="background:#F2F2F7;border-radius:10px;padding:10px 12px;margin-bottom:10px">'
+                + '<div style="font-size:11px;font-weight:600;color:#8E8E93;margin-bottom:6px">소모품 교환 주기</div>'
+                + cycles.map(function(c) { return '<div style="font-size:12px;color:#3C3C43;line-height:1.9">' + c + '</div>'; }).join("")
+                + '</div>'
+              : '')
+          + '<div class="cf">'
+          + '<button class="btn-act" data-veh-edit="' + v.id + '" style="background:' + C.veh + ';font-size:13px">✏️ 수정</button>'
+          + '<button class="btn-del" data-del="vehicles" data-id="' + v.id + '">삭제</button>'
+          + '</div></div>';
       }).join("");
   return '<div class="sh" style="align-items:flex-start">'
     + '<div><button data-tab="more" style="background:none;border:none;color:#007AFF;font-size:14px;padding:0 0 4px;font-weight:500">← 더보기</button><h2>차량 관리</h2></div>'
@@ -1073,12 +1098,28 @@ function bSheet() {
       + '<button class="svb" id="svb" style="background:' + C.fuel + '">주유 기록 저장</button>';
   }
 
-  if (s === "veh") {
-    return '<div class="g2"><div class="fld"><label>차량명 *</label><input id="f_name" placeholder="쏘렌토"/></div>'
-      + '<div class="fld"><label>번호판 *</label><input id="f_plate" placeholder="12가 3456"/></div></div>'
-      + '<div class="g2"><div class="fld"><label>담당 부서</label><input id="f_dept" placeholder="총무팀"/></div>'
-      + '<div class="fld"><label>색상</label><input type="color" id="f_color" value="#007AFF" style="height:46px;padding:4px;cursor:pointer;border-radius:11px"/></div></div>'
-      + '<button class="svb" id="svb" style="background:' + C.veh + '">차량 등록</button>';
+  if (s === "veh" || s === "veh-edit") {
+    var ev = (s === "veh-edit") ? S.vehicles.find(function(v) { return v.id === S.sheetId; }) : null;
+    var fuelOpts = ['휘발유','경유','LPG','전기','하이브리드'].map(function(f) {
+      return '<option value="' + f + '"' + (ev && ev.fuel === f ? ' selected' : '') + '>' + f + '</option>';
+    }).join("");
+    return '<div class="g2"><div class="fld"><label>차량명 *</label><input id="f_name" placeholder="쏘렌토" value="' + (ev ? ev.name : '') + '"/></div>'
+      + '<div class="fld"><label>번호판 *</label><input id="f_plate" placeholder="12가 3456" value="' + (ev ? ev.plate : '') + '"/></div></div>'
+      + '<div class="g2"><div class="fld"><label>담당 부서</label><input id="f_dept" placeholder="총무팀" value="' + (ev ? (ev.dept || '') : '') + '"/></div>'
+      + '<div class="fld"><label>색상</label><input type="color" id="f_color" value="' + (ev ? (ev.color || '#007AFF') : '#007AFF') + '" style="height:46px;padding:4px;cursor:pointer;border-radius:11px"/></div></div>'
+      + '<div class="fld"><label>사용 연료</label>'
+      + '<select id="f_fuel"><option value="">선택</option>' + fuelOpts + '</select></div>'
+      + '<div style="background:#F2F2F7;border-radius:12px;padding:14px;margin-bottom:16px">'
+      + '<div style="font-size:13px;font-weight:600;color:#3C3C43;margin-bottom:12px">🔧 소모품 교환 주기</div>'
+      + '<div style="font-size:12px;color:#8E8E93;margin-bottom:10px">미입력 항목은 표시되지 않습니다</div>'
+      + '<div class="g2"><div class="fld"><label>엔진오일 (km)</label><input type="number" id="f_oil_km" placeholder="10000" inputmode="numeric" value="' + (ev ? (ev.oilKm || '') : '') + '"/></div>'
+      + '<div class="fld"><label>엔진오일 (개월)</label><input type="number" id="f_oil_month" placeholder="6" inputmode="numeric" value="' + (ev ? (ev.oilMonth || '') : '') + '"/></div></div>'
+      + '<div class="g2"><div class="fld"><label>타이어 교체 (km)</label><input type="number" id="f_tire_km" placeholder="50000" inputmode="numeric" value="' + (ev ? (ev.tireKm || '') : '') + '"/></div>'
+      + '<div class="fld"><label>에어필터 (km)</label><input type="number" id="f_air_km" placeholder="20000" inputmode="numeric" value="' + (ev ? (ev.airKm || '') : '') + '"/></div></div>'
+      + '<div class="fld" style="margin-bottom:0"><label>브레이크액 (개월)</label><input type="number" id="f_brake_month" placeholder="24" inputmode="numeric" value="' + (ev ? (ev.brakeMonth || '') : '') + '"/></div>'
+      + '</div>'
+      + '<div class="fld"><label>기타 메모</label><input id="f_maint_note" placeholder="기타 점검 항목 메모" value="' + (ev ? (ev.maintNote || '') : '') + '"/></div>'
+      + '<button class="svb" id="svb" style="background:' + C.veh + '">' + (s === "veh-edit" ? '변경 저장' : '차량 등록') + '</button>';
   }
   return "";
 }
@@ -1105,6 +1146,10 @@ function bind() {
       var r = S.reservations.find(function(r) { return r.id === b.dataset.resvStart; });
       if (r) { PDU = null; set({ sheet: "drive", sheetId: r.id, resvData: r }); }
     };
+  });
+  // Vehicle edit
+  document.querySelectorAll("[data-veh-edit]").forEach(function(b) {
+    b.onclick = function() { PDU = null; set({ sheet: "veh-edit", sheetId: b.dataset.vehEdit }); };
   });
   // Delete (password-protected)
   document.querySelectorAll("[data-del]").forEach(function(b) {
@@ -1393,10 +1438,21 @@ async function doSave() {
     set({ fuels: [Object.assign({ id: id }, data, { createdAt: Date.now() })].concat(S.fuels), sheet: null });
 
   } else if (s === "veh") {
-    var data = { name: gv("f_name"), plate: gv("f_plate"), dept: gv("f_dept"), color: gv("f_color") };
+    var data = { name: gv("f_name"), plate: gv("f_plate"), dept: gv("f_dept"), color: gv("f_color"),
+      fuel: gv("f_fuel"), oilKm: gv("f_oil_km"), oilMonth: gv("f_oil_month"),
+      tireKm: gv("f_tire_km"), airKm: gv("f_air_km"), brakeMonth: gv("f_brake_month"),
+      maintNote: gv("f_maint_note") };
     if (!data.name || !data.plate) return alert("차량명과 번호판을 입력해주세요.");
     var id = await fsAdd("vehicles", data);
     set({ vehicles: S.vehicles.concat([Object.assign({ id: id }, data, { createdAt: Date.now() })]), sheet: null });
+  } else if (s === "veh-edit") {
+    var data = { name: gv("f_name"), plate: gv("f_plate"), dept: gv("f_dept"), color: gv("f_color"),
+      fuel: gv("f_fuel"), oilKm: gv("f_oil_km"), oilMonth: gv("f_oil_month"),
+      tireKm: gv("f_tire_km"), airKm: gv("f_air_km"), brakeMonth: gv("f_brake_month"),
+      maintNote: gv("f_maint_note") };
+    if (!data.name || !data.plate) return alert("차량명과 번호판을 입력해주세요.");
+    await fsUpd("vehicles", S.sheetId, data);
+    set({ vehicles: S.vehicles.map(function(v) { return v.id === S.sheetId ? Object.assign({}, v, data) : v; }), sheet: null });
   }
 }
 
